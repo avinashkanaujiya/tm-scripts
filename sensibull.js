@@ -16,6 +16,7 @@
     // ================ CONFIGURATION ================
     const LIVE_OPTIONS_CHARTS_URL_TEMPLATE = 'https://web.sensibull.com/live-options-charts?tradingsymbol={TICKER}';
     const LIVE_SPOT_CHARTS_URL_TEMPLATE = 'https://web.sensibull.com/chart?tradingSymbol={TICKER}';
+    const OPTION_CHAIN_URL_TEMPLATE = 'https://web.sensibull.com/option-chain?tradingsymbol={TICKER}';
     const STOCK_TICKERS = [
         'ADANIPORTS', 'ASIANPAINT', 'AXISBANK', 'BAJAJ-AUTO', 'BAJFINANCE', 'BAJAJFINSV',
         'BANDHANBNK', 'BANKBARODA', 'BEL', 'BHARTIARTL', 'BPCL', 'BRITANNIA', 'CIPLA', 
@@ -29,7 +30,9 @@
 
     let BATCH_SIZE = GM_getValue('batchSize', 10);
     let TAB_DELAY = GM_getValue('tabDelay', 200);
-    let SAVED_URLS = GM_getValue('savedUrls', []);
+    let SAVED_TICKERS = GM_getValue('savedTickers', []);
+    let LAST_TAB_INDEX = GM_getValue('lastTabIndex', 0);
+    let PANEL_VISIBLE = GM_getValue('panelVisible', false);
 
     // ================ STYLES ================
     const styles = `
@@ -156,6 +159,33 @@
         }
         .stock-batch-btn .badge { background:rgba(255,255,255,0.20);padding:2px 8px;border-radius:13px;font-size:12px;margin-left:auto;}
         .stock-batch-btn:last-child {margin-bottom:0;}
+        
+        /* Horizontal button layout for URLs tab */
+        .urls-button-container {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 17px;
+            width: 100%;
+            align-items: stretch;
+        }
+        .urls-action-btn {
+            flex: 1;
+            min-width: 0;
+            padding: 11px 8px;
+            font-size: 15px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+        }
+        .urls-action-btn.stock-btn.batch {
+            margin-bottom: 17px;
+            font-size: 15px;
+        }
         .stock-info-label {display:block;margin-bottom:23px;color:var(--color-primary);font-size:15px;font-weight:500;}
         .stock-config-row {margin-bottom:19px;}
         .stock-config-row label {font-size:13px;color:var(--color-text);display:block;margin-bottom:7px;}
@@ -169,9 +199,9 @@
             margin:16px 0 0 0;
             padding:0;
             background:var(--color-list-bg);
-            border-radius:8px;
+            border-radius:10px;
             border:1px solid var(--color-border);
-            max-height:120px;
+            max-height:260px;
             overflow-y:auto;
             overflow-x:hidden;
             box-sizing:border-box;
@@ -180,7 +210,7 @@
         }
         .urls-list li {
             font-size:13px;
-            padding:7px 12px;
+            padding:12px 14px;
             color:var(--color-text);
             background:transparent;
             border-bottom:1px solid var(--color-border);
@@ -190,7 +220,100 @@
             width: 100%;
             box-sizing: border-box;
             overflow: hidden;
+            min-height: 48px;
+            transition: background 0.15s, border-color 0.15s;
+            border-radius: 0;
+        }
+        .urls-list li:last-child {border-bottom:none;border-bottom-left-radius:10px;border-bottom-right-radius:10px;}
+        .urls-list li:first-child {border-top-left-radius:10px;border-top-right-radius:10px;}
+        .urls-list li:hover {
+            background: rgba(33,128,141,0.08);
+        }
+        @media (prefers-color-scheme: dark) {
+            .urls-list li:hover {
+                background: rgba(50,184,198,0.12);
+            }
+        }
+        .ticker-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+            flex: 1 1 auto;
+        }
+        .ticker-meta {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            min-width: 120px;
+        }
+        .ticker-index {
+            width: 26px;
+            height: 26px;
+            border-radius: 7px;
+            background: rgba(33,128,141,0.18);
+            color: var(--color-primary);
+            font-size: 12px;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+        }
+        @media (prefers-color-scheme: dark) {
+            .ticker-index {
+                background: rgba(50,184,198,0.25);
+                color: #0c1f23;
+            }
+        }
+        .ticker-symbol {
+            font-weight: 600;
+            font-size: 15px;
+            color: var(--color-text);
+            letter-spacing: 0.3px;
+        }
+        .ticker-row .url-remove-btn {
+            margin-left: auto;
+        }
+        @media (prefers-color-scheme: dark) {
+            .ticker-symbol {
+                color: #f5f7f9;
+            }
+        }
+        .ticker-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+            justify-content: flex-end;
+            flex: 1 1 auto;
+        }
+        .ticker-action-btn {
+            padding: 6px 10px;
+            font-size: 13px;
+            background: transparent;
+            border: 1px solid var(--color-border);
+            color: var(--color-primary);
+            border-radius: 6px;
+            box-shadow: none;
+            margin-bottom: 0;
             min-height: 32px;
+        }
+        .ticker-action-btn:hover {
+            background: var(--color-primary);
+            color: #fff;
+        }
+        .ticker-action-btn:focus {
+            outline: 2px solid rgba(33,128,141,0.5);
+            outline-offset: 1px;
+        }
+        @media (prefers-color-scheme: dark) {
+            .ticker-action-btn {
+                color: #e6f7fa;
+                border-color: rgba(230,247,250,0.35);
+            }
+            .ticker-action-btn:hover {
+                color: #0b1f24;
+                background: #32b8c6;
+            }
         }
         .urls-list li:last-child {border-bottom:none;}
         .url-text-container {
@@ -270,6 +393,13 @@
                 overflow-y: auto !important;
                 overflow-x: hidden !important;
             }
+            .urls-button-container {
+                gap: 8px !important;
+            }
+            .urls-action-btn {
+                font-size: 13px !important;
+                padding: 10px 6px !important;
+            }
             .url-text-container {
                 max-width: calc(100% - 25px) !important;
             }
@@ -300,6 +430,22 @@
         toast.textContent = message;
         toast.style.opacity = '1';
         setTimeout(() => { toast.style.opacity = '0'; }, 2000);
+    }
+    function createDelaySettingRow(id) {
+        const row = document.createElement('div');
+        row.className = 'stock-config-row';
+        const label = document.createElement('label');
+        label.textContent = 'Tab Delay (ms)';
+        const input = document.createElement('input');
+        input.type = 'number';
+        input.value = TAB_DELAY;
+        input.min = '0';
+        input.max = '2000';
+        input.step = '50';
+        input.id = id;
+        row.appendChild(label);
+        row.appendChild(input);
+        return { row, input };
     }
     function extractTickerFromURL() {
         const url = window.location.href;
@@ -339,22 +485,15 @@
             }, index * TAB_DELAY);
         });
     }
-    function batchOpenSavedTabs() {
-        SAVED_URLS = GM_getValue('savedUrls', []);
-        if (!SAVED_URLS.length) {
-            showToast('No URLs to open');
+    function batchOpenTickers(tickers, opener, label) {
+        if (!tickers.length) {
+            showToast(`No tickers to open for ${label}`);
             return;
         }
-        SAVED_URLS.forEach((url, idx) => {
-            setTimeout(() => {
-                if (typeof GM_openInTab !== 'undefined') {
-                    GM_openInTab(url, { active: false, insert: true });
-                } else {
-                    window.open(url, '_blank');
-                }
-            }, idx * TAB_DELAY);
+        tickers.forEach((ticker, idx) => {
+            setTimeout(() => opener(ticker), idx * TAB_DELAY);
         });
-        showToast('Opening ' + SAVED_URLS.length + ' tabs');
+        showToast(`Opening ${tickers.length} ${label}`);
     }
 
     // ================ CHARTS TOOLS TAB PANEL ================
@@ -409,21 +548,9 @@
         batchRow.appendChild(batchInput);
         inner.appendChild(batchRow);
 
-        // Tab Delay Configuration
-        const delayRow = document.createElement('div');
-        delayRow.className = 'stock-config-row';
-        const delayLabel = document.createElement('label');
-        delayLabel.textContent = 'Tab Delay (ms)';
-        const delayInput = document.createElement('input');
-        delayInput.type = 'number';
-        delayInput.value = TAB_DELAY;
-        delayInput.min = '0';
-        delayInput.max = '2000';
-        delayInput.step = '50';
-        delayInput.id = 'tab-delay-input-charts';
-        delayRow.appendChild(delayLabel);
-        delayRow.appendChild(delayInput);
+        const { row: delayRow, input: delayInput } = createDelaySettingRow('tab-delay-input');
         inner.appendChild(delayRow);
+        delayRow.querySelector('label').textContent = 'Tab Delay (ms)';
 
         // Save Settings Button
         const saveBtn = document.createElement('button');
@@ -454,159 +581,154 @@
         const inner = document.createElement('div');
         inner.className = 'stock-panel-inner';
 
-        // Save current tab button
-        const saveThisTabBtn = document.createElement('button');
-        saveThisTabBtn.className = 'stock-btn';
-        saveThisTabBtn.textContent = 'Save This Tab';
-        saveThisTabBtn.addEventListener('click', () => {
-            const url = window.location.href.split('#')[0];
-            SAVED_URLS = GM_getValue('savedUrls', []);
-            if (SAVED_URLS.includes(url)) {
-                showToast('Already saved');
+        // Horizontal button container
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'urls-button-container';
+
+        // Save current ticker button
+        const saveThisTickerBtn = document.createElement('button');
+        saveThisTickerBtn.className = 'stock-btn urls-action-btn';
+        saveThisTickerBtn.textContent = 'Save This Ticker';
+        saveThisTickerBtn.addEventListener('click', () => {
+            const ticker = extractTickerFromURL();
+            if (!ticker) {
+                showToast('No ticker detected');
                 return;
             }
-            SAVED_URLS.push(url);
-            GM_setValue('savedUrls', SAVED_URLS);
-            showToast('Tab URL saved!');
-            updateUrlsList();
+            SAVED_TICKERS = GM_getValue('savedTickers', []);
+            if (SAVED_TICKERS.includes(ticker)) {
+                showToast('Ticker already saved');
+                return;
+            }
+            SAVED_TICKERS.push(ticker);
+            GM_setValue('savedTickers', SAVED_TICKERS);
+            showToast('Ticker saved!');
+            updateTickerList();
         });
-        inner.appendChild(saveThisTabBtn);
+        buttonContainer.appendChild(saveThisTickerBtn);
 
-        const openBtn = document.createElement('button');
-        openBtn.className = 'stock-btn batch';
-        openBtn.textContent = 'Batch Open Saved URLs';
-        openBtn.addEventListener('click', () => batchOpenSavedTabs());
-        inner.appendChild(openBtn);
+        const openBatchTickerBtn = document.createElement('button');
+        openBatchTickerBtn.className = 'stock-btn batch urls-action-btn';
+        openBatchTickerBtn.textContent = 'Open All Live Charts';
+        openBatchTickerBtn.addEventListener('click', () => {
+            SAVED_TICKERS = GM_getValue('savedTickers', []);
+            batchOpenTickers(SAVED_TICKERS, openTickerSpotChart, 'spot charts');
+        });
+        buttonContainer.appendChild(openBatchTickerBtn);
+
+        inner.appendChild(buttonContainer);
 
         inner.appendChild(divider());
 
-        // Integrated Settings Section
-        inner.appendChild(labelSpan('Settings'));
-        
-        // Tab Delay Configuration
-        const delayRow = document.createElement('div');
-        delayRow.className = 'stock-config-row';
-        const delayLabel = document.createElement('label');
-        delayLabel.textContent = 'Tab Delay (ms)';
-        const delayInput = document.createElement('input');
-        delayInput.type = 'number';
-        delayInput.value = TAB_DELAY;
-        delayInput.min = '0';
-        delayInput.max = '2000';
-        delayInput.step = '50';
-        delayInput.id = 'tab-delay-input-urls';
-        delayRow.appendChild(delayLabel);
-        delayRow.appendChild(delayInput);
-        inner.appendChild(delayRow);
+        const listHeader = document.createElement('div');
+        listHeader.className = 'urls-list-label';
+        listHeader.textContent = 'Saved Tickers: ';
 
-        // Save Settings Button
-        const saveBtn = document.createElement('button');
-        saveBtn.className = 'stock-btn batch';
-        saveBtn.textContent = 'Save Delay Setting';
-        saveBtn.addEventListener('click', () => {
-            const val = parseInt(delayInput.value);
-            if (val >= 0 && val <= 2000) {
-                GM_setValue('tabDelay', val);
-                TAB_DELAY = val;
-                showToast('Saved!');
-            } else {
-                showToast('Invalid delay');
-            }
-        });
-        inner.appendChild(saveBtn);
+        const tickerCountSpan = document.createElement('span');
+        tickerCountSpan.style.fontWeight = 'bold';
+        tickerCountSpan.style.marginLeft = '3px';
+        listHeader.appendChild(tickerCountSpan);
 
-        // List label and clear
-        const urlsListLabel = document.createElement('div');
-        urlsListLabel.className = 'urls-list-label';
-        urlsListLabel.textContent = 'Saved URLs: ';
-
-        // Count
-        const urlCountSpan = document.createElement('span');
-        urlCountSpan.style.fontWeight = 'bold';
-        urlCountSpan.style.marginLeft = '3px';
-        urlsListLabel.appendChild(urlCountSpan);
-
-        // Clear btn
         const clearBtn = document.createElement('button');
         clearBtn.className = 'urls-clear-btn';
         clearBtn.textContent = "Clear";
         clearBtn.addEventListener('click', () => {
-            GM_setValue('savedUrls', []);
-            SAVED_URLS = [];
-            showToast('Saved URLs cleared');
-            updateUrlsList();
+            GM_setValue('savedTickers', []);
+            SAVED_TICKERS = [];
+            showToast('Saved tickers cleared');
+            updateTickerList();
         });
-        urlsListLabel.appendChild(clearBtn);
+        listHeader.appendChild(clearBtn);
 
-        inner.appendChild(urlsListLabel);
+        inner.appendChild(listHeader);
 
-        // List
-        const urlsList = document.createElement('ul');
-        urlsList.className = 'urls-list';
-        inner.appendChild(urlsList);
+        const tickerList = document.createElement('ul');
+        tickerList.className = 'urls-list';
+        inner.appendChild(tickerList);
 
-        function updateUrlsList() {
-            urlsList.innerHTML = '';
-            SAVED_URLS = GM_getValue('savedUrls', []);
-            urlCountSpan.textContent = `(${SAVED_URLS.length})`;
-            SAVED_URLS.forEach((url, index) => {
+        function actionButton(label, handler) {
+            const btn = document.createElement('button');
+            btn.className = 'urls-action-btn ticker-action-btn';
+            btn.textContent = label;
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                handler();
+            });
+            return btn;
+        }
+
+        function openUrl(url, options = { active: false }) {
+            if (typeof GM_openInTab !== 'undefined') {
+                GM_openInTab(url, { active: options.active, insert: true });
+            } else {
+                const win = window.open(url, '_blank');
+                if (options.active && win) win.focus();
+            }
+        }
+
+        function openTickerOptionChain(ticker) {
+            openUrl(OPTION_CHAIN_URL_TEMPLATE.replace('{TICKER}', ticker));
+        }
+
+        function openTickerLiveOptions(ticker) {
+            openUrl(LIVE_OPTIONS_CHARTS_URL_TEMPLATE.replace('{TICKER}', ticker));
+        }
+
+        function openTickerSpotChart(ticker) {
+            openUrl(LIVE_SPOT_CHARTS_URL_TEMPLATE.replace('{TICKER}', ticker), { active: true });
+        }
+
+        function updateTickerList() {
+            tickerList.innerHTML = '';
+            SAVED_TICKERS = GM_getValue('savedTickers', []);
+            tickerCountSpan.textContent = `(${SAVED_TICKERS.length})`;
+            SAVED_TICKERS.forEach((ticker, index) => {
                 const li = document.createElement('li');
-                
-                // Create URL text container
-                const urlTextContainer = document.createElement('div');
-                urlTextContainer.className = 'url-text-container';
-                
-                // Create URL tooltip
-                const urlTooltip = document.createElement('div');
-                urlTooltip.className = 'url-tooltip';
-                urlTooltip.setAttribute('tabindex', '0');
-                urlTooltip.setAttribute('role', 'button');
-                urlTooltip.setAttribute('aria-expanded', 'false');
-                
-                // Create truncated URL text
-                const urlText = document.createElement('span');
-                urlText.className = 'url-text';
-                urlText.textContent = url;
-                urlText.setAttribute('aria-describedby', `url-tooltip-${index}`);
-                
-                // Optimized DOM assembly for immediate rendering
-                urlTooltip.appendChild(urlText);
-                urlTooltip.title = url;
-                urlTooltip.setAttribute('aria-label', url);
-                urlTextContainer.appendChild(urlTooltip);
-                
-                // Fast truncation check without timing delays
-                if (urlText.scrollWidth > urlText.clientWidth) {
-                    urlText.classList.add('truncated');
-                }
-                
-                // Create remove button
+                li.classList.add('ticker-row');
+
+                const meta = document.createElement('div');
+                meta.className = 'ticker-meta';
+
+                const countBadge = document.createElement('span');
+                countBadge.className = 'ticker-index';
+                countBadge.textContent = index + 1;
+
+                const label = document.createElement('span');
+                label.className = 'url-text ticker-symbol';
+                label.textContent = ticker;
+
+                meta.appendChild(countBadge);
+                meta.appendChild(label);
+                li.appendChild(meta);
+
+                const actionsWrapper = document.createElement('div');
+                actionsWrapper.className = 'ticker-actions';
+                actionsWrapper.appendChild(actionButton('Option Chain', () => openTickerOptionChain(ticker)));
+                actionsWrapper.appendChild(actionButton('Live Options', () => openTickerLiveOptions(ticker)));
+                actionsWrapper.appendChild(actionButton('Spot Chart', () => openTickerSpotChart(ticker)));
+
                 const removeBtn = document.createElement('button');
                 removeBtn.className = 'url-remove-btn';
                 removeBtn.textContent = '×';
-                removeBtn.title = 'Remove URL';
-                removeBtn.setAttribute('aria-label', `Remove URL: ${url}`);
-                
-                // Add click handler for remove functionality
+                removeBtn.title = `Remove ${ticker}`;
                 removeBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
-                    removeUrl(index);
+                    removeTicker(index);
                 });
-                
-                // Add to list item
-                li.appendChild(urlTextContainer);
+
+                li.appendChild(actionsWrapper);
                 li.appendChild(removeBtn);
-                urlsList.appendChild(li);
+                tickerList.appendChild(li);
             });
         }
-        
-        function removeUrl(index) {
-            SAVED_URLS.splice(index, 1);
-            GM_setValue('savedUrls', SAVED_URLS);
-            updateUrlsList();
-            showToast('URL removed');
+
+        function removeTicker(index) {
+            SAVED_TICKERS.splice(index, 1);
+            GM_setValue('savedTickers', SAVED_TICKERS);
+            updateTickerList();
+            showToast('Ticker removed');
         }
-        updateUrlsList();
+        updateTickerList();
 
         return inner;
     }
@@ -629,18 +751,20 @@
         tabBar.appendChild(chartsTab);
         tabBar.appendChild(urlsTab);
 
-        let panelContent1 = panelChartsTools();
-        let panelContent2 = panelSavedUrlsTools();
-
         const scrollPanel = document.createElement('div');
         scrollPanel.className = 'stock-panel-scroll';
 
-        const switchTab = (index) => {
+        const switchTab = (index, persist = true) => {
             chartsTab.classList.toggle('active', index === 0);
             urlsTab.classList.toggle('active', index === 1);
             scrollPanel.innerHTML = '';
-            if (index === 0) scrollPanel.appendChild(panelContent1);
-            else scrollPanel.appendChild(panelContent2);
+            LAST_TAB_INDEX = index;
+            if (persist) GM_setValue('lastTabIndex', index);
+            if (index === 0) {
+                scrollPanel.appendChild(panelChartsTools());
+            } else {
+                scrollPanel.appendChild(panelSavedUrlsTools());
+            }
         };
         chartsTab.addEventListener('click', () => switchTab(0));
         urlsTab.addEventListener('click', () => switchTab(1));
@@ -669,7 +793,11 @@
         mainOuterPanel.appendChild(tabBar);
         mainOuterPanel.appendChild(scrollPanel);
 
-        switchTab(0);
+        switchTab(LAST_TAB_INDEX, false);
+
+        if (PANEL_VISIBLE) {
+            mainOuterPanel.classList.add('visible');
+        }
 
         const toast = document.createElement('div');
         toast.id = 'stock-toast';
@@ -677,16 +805,23 @@
         document.body.appendChild(toast);
 
         toggleBtn.addEventListener('click', () => {
-            mainOuterPanel.classList.toggle('visible');
+            const isVisible = mainOuterPanel.classList.toggle('visible');
+            PANEL_VISIBLE = isVisible;
+            GM_setValue('panelVisible', isVisible);
         });
+        widget.addEventListener('click', (e) => e.stopPropagation());
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape') {
                 mainOuterPanel.classList.remove('visible');
+                PANEL_VISIBLE = false;
+                GM_setValue('panelVisible', false);
             }
         });
         document.addEventListener('click', (e) => {
             if (!widget.contains(e.target)) {
                 mainOuterPanel.classList.remove('visible');
+                PANEL_VISIBLE = false;
+                GM_setValue('panelVisible', false);
             }
         });
 
