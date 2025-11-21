@@ -28,6 +28,7 @@
         'SBILIFE', 'SUNPHARMA', 'TATACONSUM', 'TATASTEEL', 'TCS', 'TECHM', 'TITAN',
         'ULTRACEMCO', 'WIPRO'
     ];
+    const VALID_TICKER_PATTERN = /^[A-Z0-9&-]+$/;
 
     let BATCH_SIZE = GM_getValue('batchSize', 10);
     let TAB_DELAY = GM_getValue('tabDelay', 200);
@@ -186,6 +187,59 @@
         .urls-action-btn.stock-btn.batch {
             margin-bottom: 17px;
             font-size: 15px;
+        }
+        .urls-import-card {
+            border: 1px solid var(--color-border);
+            border-radius: 10px;
+            background: var(--color-list-bg);
+            padding: 16px;
+            margin-bottom: 18px;
+        }
+        .urls-import-card .urls-list-title {
+            margin-bottom: 8px;
+        }
+        .urls-import-helper {
+            font-size: 13px;
+            color: var(--color-text);
+            margin-bottom: 10px;
+        }
+        .urls-import-text {
+            width: 100%;
+            min-height: 90px;
+            resize: vertical;
+            border-radius: 8px;
+            border: 1px solid var(--color-border);
+            padding: 10px 12px;
+            font-size: 14px;
+            background: var(--color-surface);
+            color: var(--color-text);
+            box-sizing: border-box;
+        }
+        .urls-import-text::placeholder {
+            color: var(--color-text);
+            opacity: 0.6;
+        }
+        .urls-import-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-top: 12px;
+        }
+        .urls-import-btn {
+            flex: 1 1 180px;
+            padding: 10px 12px;
+            font-size: 15px;
+        }
+        .urls-import-toggle {
+            width: 100%;
+            margin-top: 16px;
+        }
+        .urls-import-section {
+            display: none;
+            margin-top: 14px;
+        }
+        .urls-import-section.visible {
+            display: block;
         }
         .stock-info-label {display:block;margin-bottom:23px;color:var(--color-primary);font-size:15px;font-weight:500;}
         .stock-config-row {margin-bottom:19px;}
@@ -498,6 +552,61 @@
         }
         return null;
     }
+    function parseTickerInput(rawInput) {
+        if (rawInput == null) return [];
+        let source = rawInput;
+        if (typeof rawInput === 'string') {
+            const trimmed = rawInput.trim();
+            if (!trimmed) return [];
+            try {
+                const parsed = JSON.parse(trimmed);
+                if (Array.isArray(parsed)) {
+                    source = parsed;
+                } else if (typeof parsed === 'string') {
+                    source = parsed.split(/[\n\r,]+/);
+                } else {
+                    source = trimmed.split(/[\n\r,]+/);
+                }
+            } catch (err) {
+                source = trimmed.split(/[\n\r,]+/);
+            }
+        } else if (!Array.isArray(rawInput)) {
+            source = [rawInput];
+        }
+        if (typeof source === 'string') {
+            source = source.split(/[\n\r,]+/);
+        }
+        return source
+            .map((value) => String(value).trim().toUpperCase())
+            .filter((value) => value && VALID_TICKER_PATTERN.test(value));
+    }
+    function fallbackClipboardCopy(text) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.top = '-9999px';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        const successful = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        if (!successful) {
+            throw new Error('Copy command failed');
+        }
+    }
+    function copyTextToClipboard(text) {
+        if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
+            return navigator.clipboard.writeText(text);
+        }
+        return new Promise((resolve, reject) => {
+            try {
+                fallbackClipboardCopy(text);
+                resolve();
+            } catch (error) {
+                reject(error);
+            }
+        });
+    }
     function openCurrentTicker(ticker) {
         showToast(`Opening chart for ${ticker}`);
         openSpotChart(ticker, true);
@@ -707,6 +816,8 @@
         tickerList.className = 'urls-list';
         inner.appendChild(tickerList);
 
+        inner.appendChild(buildImportExportCard());
+
         function actionButton(label, handler) {
             const btn = document.createElement('button');
             btn.className = 'urls-action-btn ticker-action-btn';
@@ -716,6 +827,85 @@
                 handler();
             });
             return btn;
+        }
+
+        function buildImportExportCard() {
+            const card = document.createElement('div');
+            card.className = 'urls-import-card';
+
+            const toggleBtn = document.createElement('button');
+            toggleBtn.className = 'stock-btn urls-import-toggle';
+            toggleBtn.textContent = 'Show Import / Export';
+
+            const section = document.createElement('div');
+            section.className = 'urls-import-section';
+
+            const importTitle = document.createElement('span');
+            importTitle.className = 'urls-list-title';
+            importTitle.textContent = 'Import / Export';
+            section.appendChild(importTitle);
+
+            const helper = document.createElement('div');
+            helper.className = 'urls-import-helper';
+            helper.textContent = 'Paste JSON array or comma/newline separated tickers. Export copies current list to clipboard.';
+            section.appendChild(helper);
+
+            const textArea = document.createElement('textarea');
+            textArea.className = 'urls-import-text';
+            textArea.placeholder = 'TATASTEEL, SBIN, INFY or ["TATASTEEL","SBIN"]';
+            section.appendChild(textArea);
+
+            const importActions = document.createElement('div');
+            importActions.className = 'urls-import-actions';
+
+            const importBtn = document.createElement('button');
+            importBtn.className = 'stock-btn urls-import-btn';
+            importBtn.textContent = 'Import';
+            importBtn.addEventListener('click', () => {
+                const parsed = parseTickerInput(textArea.value);
+                if (!parsed.length) {
+                    showToast('No valid tickers to import');
+                    return;
+                }
+                const current = new Set(GM_getValue('savedTickers', []));
+                parsed.forEach((ticker) => current.add(ticker));
+                SAVED_TICKERS = Array.from(current);
+                GM_setValue('savedTickers', SAVED_TICKERS);
+                showToast(`Imported ${parsed.length} tickers`);
+                updateTickerList();
+                textArea.value = '';
+            });
+            importActions.appendChild(importBtn);
+
+            const exportBtn = document.createElement('button');
+            exportBtn.className = 'stock-btn urls-import-btn';
+            exportBtn.textContent = 'Export';
+            exportBtn.addEventListener('click', async () => {
+                SAVED_TICKERS = GM_getValue('savedTickers', []);
+                if (!SAVED_TICKERS.length) {
+                    showToast('No tickers to export');
+                    return;
+                }
+                try {
+                    await copyTextToClipboard(JSON.stringify(SAVED_TICKERS, null, 2));
+                    showToast('Tickers copied to clipboard');
+                } catch (error) {
+                    console.error('Clipboard copy failed', error);
+                    showToast('Clipboard not available');
+                }
+            });
+            importActions.appendChild(exportBtn);
+
+            toggleBtn.addEventListener('click', () => {
+                const isVisible = section.classList.toggle('visible');
+                toggleBtn.textContent = isVisible ? 'Hide Import / Export' : 'Show Import / Export';
+            });
+
+            section.appendChild(importActions);
+            card.appendChild(toggleBtn);
+            card.appendChild(section);
+
+            return card;
         }
 
         function updateTickerList() {
@@ -760,6 +950,14 @@
                 li.appendChild(removeBtn);
                 tickerList.appendChild(li);
             });
+
+            const existingCard = inner.querySelector('.urls-import-card');
+            if (!existingCard) {
+                const card = buildImportExportCard();
+                inner.appendChild(card);
+            } else if (!existingCard.isConnected) {
+                inner.appendChild(existingCard);
+            }
         }
 
         function removeTicker(index) {
