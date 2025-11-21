@@ -17,6 +17,7 @@
     const LIVE_OPTIONS_CHARTS_URL_TEMPLATE = 'https://web.sensibull.com/live-options-charts?tradingsymbol={TICKER}';
     const LIVE_SPOT_CHARTS_URL_TEMPLATE = 'https://web.sensibull.com/chart?tradingSymbol={TICKER}';
     const OPTION_CHAIN_URL_TEMPLATE = 'https://web.sensibull.com/option-chain?tradingsymbol={TICKER}';
+    const ANALYSIS_TABS = ['Charts Tools', 'Saved Tickers', 'Analysis'];
     const STOCK_TICKERS = [
         'ADANIPORTS', 'ASIANPAINT', 'AXISBANK', 'BAJAJ-AUTO', 'BAJFINANCE', 'BAJAJFINSV',
         'BANDHANBNK', 'BANKBARODA', 'BEL', 'BHARTIARTL', 'BPCL', 'BRITANNIA', 'CIPLA', 
@@ -332,7 +333,9 @@
             width: 100%;
             box-sizing: border-box;
         }
-        .url-text.truncated {position:relative;}
+        .url-text.truncated {
+            position:relative;
+        }
         .url-text.truncated::after {
             content:"";
             position:absolute;
@@ -431,6 +434,38 @@
         toast.style.opacity = '1';
         setTimeout(() => { toast.style.opacity = '0'; }, 2000);
     }
+
+    // ================ URL OPEN HELPERS ================
+    function openUrl(url, options = { active: false, insert: true }) {
+        if (typeof GM_openInTab !== 'undefined') {
+            GM_openInTab(url, { active: options.active, insert: options.insert });
+        } else {
+            const win = window.open(url, '_blank');
+            if (options.active && win) win.focus();
+        }
+    }
+    function openOptionChain(ticker, active = true) {
+        openUrl(OPTION_CHAIN_URL_TEMPLATE.replace('{TICKER}', ticker), { active, insert: true });
+    }
+    function openLiveOptionsChart(ticker, active = true) {
+        openUrl(LIVE_OPTIONS_CHARTS_URL_TEMPLATE.replace('{TICKER}', ticker), { active, insert: true });
+    }
+    function openSpotChart(ticker, active = true) {
+        openUrl(LIVE_SPOT_CHARTS_URL_TEMPLATE.replace('{TICKER}', ticker), { active, insert: true });
+    }
+    function openTickerOptionChain(ticker, active = true) {
+        if (!ticker) return;
+        openOptionChain(ticker, active);
+    }
+    function openTickerLiveOptions(ticker, active = true) {
+        if (!ticker) return;
+        openLiveOptionsChart(ticker, active);
+    }
+    function openTickerSpotChart(ticker, active = true) {
+        if (!ticker) return;
+        openSpotChart(ticker, active);
+    }
+
     function createDelaySettingRow(id) {
         const row = document.createElement('div');
         row.className = 'stock-config-row';
@@ -465,12 +500,7 @@
     }
     function openCurrentTicker(ticker) {
         showToast(`Opening chart for ${ticker}`);
-        const url = LIVE_SPOT_CHARTS_URL_TEMPLATE.replace('{TICKER}', ticker);
-        if (typeof GM_openInTab !== 'undefined') {
-            GM_openInTab(url, { active: true, insert: true });
-        } else {
-            window.open(url, '_blank').focus();
-        }
+        openSpotChart(ticker, true);
     }
     function openBatch(tickers, batchNum) {
         showToast(`Batch ${batchNum}: Opening ${tickers.length} tabs`);
@@ -490,6 +520,7 @@
             showToast(`No tickers to open for ${label}`);
             return;
         }
+
         tickers.forEach((ticker, idx) => {
             setTimeout(() => opener(ticker), idx * TAB_DELAY);
         });
@@ -573,6 +604,36 @@
 
         return inner;
     }
+    function panelAnalysisTools() {
+        const inner = document.createElement('div');
+        inner.className = 'stock-panel-inner';
+
+        const currentTicker = extractTickerFromURL();
+        const status = document.createElement('div');
+        status.className = 'stock-info-label';
+        status.textContent = currentTicker ? `Ticker detected: ${currentTicker}` : 'No ticker detected in current URL';
+        inner.appendChild(status);
+
+        const buttonLabels = [
+            { label: 'Open Option Chain', action: () => currentTicker && openOptionChain(currentTicker) },
+            { label: 'Open Live Options Chart', action: () => currentTicker && openLiveOptionsChart(currentTicker) },
+            { label: 'Open Spot Chart', action: () => currentTicker && openSpotChart(currentTicker, true) }
+        ];
+
+        buttonLabels.forEach(({ label, action }) => {
+            const btn = document.createElement('button');
+            btn.className = 'stock-btn';
+            btn.textContent = label;
+            btn.disabled = !currentTicker;
+            btn.addEventListener('click', () => {
+                action(true);
+            });
+            inner.appendChild(btn);
+        });
+
+        return inner;
+    }
+
 
 
 
@@ -657,27 +718,6 @@
             return btn;
         }
 
-        function openUrl(url, options = { active: false }) {
-            if (typeof GM_openInTab !== 'undefined') {
-                GM_openInTab(url, { active: options.active, insert: true });
-            } else {
-                const win = window.open(url, '_blank');
-                if (options.active && win) win.focus();
-            }
-        }
-
-        function openTickerOptionChain(ticker) {
-            openUrl(OPTION_CHAIN_URL_TEMPLATE.replace('{TICKER}', ticker));
-        }
-
-        function openTickerLiveOptions(ticker) {
-            openUrl(LIVE_OPTIONS_CHARTS_URL_TEMPLATE.replace('{TICKER}', ticker));
-        }
-
-        function openTickerSpotChart(ticker) {
-            openUrl(LIVE_SPOT_CHARTS_URL_TEMPLATE.replace('{TICKER}', ticker), { active: true });
-        }
-
         function updateTickerList() {
             tickerList.innerHTML = '';
             SAVED_TICKERS = GM_getValue('savedTickers', []);
@@ -745,11 +785,16 @@
         chartsTab.className = 'stock-tab-btn active';
 
         const urlsTab = document.createElement('button');
-        urlsTab.textContent = "Saved URLs Tools";
+        urlsTab.textContent = "Saved Tickers";
         urlsTab.className = 'stock-tab-btn';
+
+        const analysisTab = document.createElement('button');
+        analysisTab.textContent = 'Analysis';
+        analysisTab.className = 'stock-tab-btn';
 
         tabBar.appendChild(chartsTab);
         tabBar.appendChild(urlsTab);
+        tabBar.appendChild(analysisTab);
 
         const scrollPanel = document.createElement('div');
         scrollPanel.className = 'stock-panel-scroll';
@@ -757,17 +802,21 @@
         const switchTab = (index, persist = true) => {
             chartsTab.classList.toggle('active', index === 0);
             urlsTab.classList.toggle('active', index === 1);
+            analysisTab.classList.toggle('active', index === 2);
             scrollPanel.innerHTML = '';
             LAST_TAB_INDEX = index;
             if (persist) GM_setValue('lastTabIndex', index);
             if (index === 0) {
                 scrollPanel.appendChild(panelChartsTools());
-            } else {
+            } else if (index === 1) {
                 scrollPanel.appendChild(panelSavedUrlsTools());
+            } else {
+                scrollPanel.appendChild(panelAnalysisTools());
             }
         };
         chartsTab.addEventListener('click', () => switchTab(0));
         urlsTab.addEventListener('click', () => switchTab(1));
+        analysisTab.addEventListener('click', () => switchTab(2));
 
         return { tabBar, scrollPanel, switchTab };
     }
