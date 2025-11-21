@@ -17,12 +17,14 @@
     const LIVE_OPTIONS_CHARTS_URL_TEMPLATE = 'https://web.sensibull.com/live-options-charts?tradingsymbol={TICKER}';
     const LIVE_SPOT_CHARTS_URL_TEMPLATE = 'https://web.sensibull.com/chart?tradingSymbol={TICKER}';
     const STOCK_TICKERS = [
-        'HDFCBANK', 'RELIANCE', 'ICICIBANK', 'BHARTIARTL', 'INFY', 'LT', 'SBIN', 'AXISBANK',
-        'ITC', 'M&M', 'TCS', 'KOTAKBANK', 'BAJFINANCE', 'HINDUNILVR', 'MARUTI', 'ETERNAL', 'SUNPHARMA',
-        'HCLTECH', 'NTPC', 'BEL', 'TITAN', 'TATASTEEL', 'ULTRACEMCO', 'ASIANPAINT', 'POWERGRID', 'INDIGO',
-        'BAJAJFINSV', 'HINDALCO', 'ADANIPORTS', 'SHRIRAMFIN', 'JIOFIN', 'BAJAJ-AUTO', 'JSWSTEEL', 'EICHERMOT',
-        'ONGC', 'NESTLEIND', 'TECHM', 'TRENT', 'COALINDIA', 'SBILIFE', 'CIPLA', 'MAXHEALTH', 'GRASIM',
-        'TATACONSUM', 'APOLLOHOSP', 'TMPV', 'DRREDDY', 'HDFCLIFE', 'WIPRO', 'ADANIENT'
+        'ADANIPORTS', 'ASIANPAINT', 'AXISBANK', 'BAJAJ-AUTO', 'BAJFINANCE', 'BAJAJFINSV',
+        'BANDHANBNK', 'BANKBARODA', 'BEL', 'BHARTIARTL', 'BPCL', 'BRITANNIA', 'CIPLA', 
+        'COALINDIA', 'DIVISLAB', 'DRREDDY', 'EICHERMOT', 'GRASIM', 'HCLTECH', 'HDFCBANK',
+        'HDFCLIFE', 'HEROMOTOCO', 'HINDALCO', 'HINDUNILVR', 'ICICIBANK', 'INDIGO', 
+        'INDUSINDBK', 'INFY', 'ITC', 'JSWSTEEL', 'KOTAKBANK', 'LT', 'M&M', 'MARUTI',
+        'NESTLEIND', 'NTPC', 'ONGC', 'POWERGRID', 'RELIANCE', 'SBIN', 'SHREECEM',
+        'SBILIFE', 'SUNPHARMA', 'TATACONSUM', 'TATASTEEL', 'TCS', 'TECHM', 'TITAN',
+        'ULTRACEMCO', 'WIPRO'
     ];
 
     let BATCH_SIZE = GM_getValue('batchSize', 10);
@@ -49,37 +51,75 @@
                 --color-list-bg: #232829;
             }
         }
-        #stock-ticker-widget {position:fixed;bottom:32px;left:32px;z-index:9999999;font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;}
+        #stock-ticker-widget {
+            position:fixed;
+            bottom:32px;
+            left:32px;
+            z-index:9999999;
+            font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+            max-width: 95vw;
+            overflow: visible;
+        }
         #stock-toggle-btn {width:56px;height:56px;border-radius:50%;background:var(--color-primary);color:#fff;border:none;cursor:pointer;font-size:25px;font-weight:700;box-shadow:0 2px 10px rgba(33,128,141,0.12);margin-bottom:8px;}
         #stock-toggle-btn:hover {background:#29b1c5;}
         #stock-main-panel {
             background:var(--color-surface);
             border:1px solid var(--color-border);
             border-radius:14px;
-            min-width:330px;
-            max-width:380px;
-            max-height:560px;
+            width: 380px;
+            height:560px;
             box-shadow:0 8px 21px rgba(33,128,141,.12);
             display:none;
+            flex-direction: column;
+            overflow: hidden;
+            position: relative;
+            box-sizing: border-box;
         }
-        #stock-main-panel.visible {display:block;}
+        #stock-main-panel.visible {display:flex;}
         #stock-tab-bar {
             display:flex;
             width:100%;
+            height:48px;
             border-bottom:1px solid var(--color-border);
             background:var(--color-bg);
-            position: sticky;
-            top: 0;
-            left: 0;
+            flex-shrink: 0;
+            position: relative;
             z-index: 2;
+            overflow: hidden;
         }
         .stock-panel-scroll {
             overflow-y: auto;
-            min-height: 150px;
-            max-height: 458px;
+            overflow-x: hidden;
+            height: 512px;
+            flex: 1;
+            min-height: 512px;
+            max-height: 512px;
+            position: relative;
         }
-        .stock-panel-inner {padding:20px 22px 24px 22px;}
-        .stock-tab-btn {flex:1 1 0;padding:13px 0 11px 0;border:none;background:var(--color-bg);color:var(--color-primary);font-weight:600;font-size:16px;cursor:pointer;margin:0;transition:background 0.22s;}
+        .stock-panel-inner {
+            padding:20px 22px 24px 22px;
+            width:100%;
+            box-sizing:border-box;
+            overflow: hidden;
+            position: relative;
+        }
+        .stock-tab-btn {
+            flex:1 1 0;
+            height:48px;
+            border:none;
+            background:var(--color-bg);
+            color:var(--color-primary);
+            font-weight:600;
+            font-size:16px;
+            cursor:pointer;
+            margin:0;
+            transition:background 0.22s;
+            display:flex;
+            align-items:center;
+            justify-content:center;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
         .stock-tab-btn.active {background:var(--color-primary);color:#fff;}
         .divider {height:1px;background:var(--color-border);margin:18px 0 19px 0;border-radius:2px;}
         .stock-current-ticker {
@@ -112,25 +152,134 @@
             text-align: left;
             gap: 10px;
             padding-left: 15px;
+            padding-right: 12px;
         }
         .stock-batch-btn .badge { background:rgba(255,255,255,0.20);padding:2px 8px;border-radius:13px;font-size:12px;margin-left:auto;}
         .stock-batch-btn:last-child {margin-bottom:0;}
         .stock-info-label {display:block;margin-bottom:23px;color:var(--color-primary);font-size:15px;font-weight:500;}
         .stock-config-row {margin-bottom:19px;}
         .stock-config-row label {font-size:13px;color:var(--color-text);display:block;margin-bottom:7px;}
-        .stock-config-row input {width:100%;padding:9px 13px;border-radius:7px;border:1px solid var(--color-border);font-size:15px;}
+        .stock-config-row input {width:100%;padding:9px 13px;border-radius:7px;border:1px solid var(--color-border);font-size:15px;background:var(--color-surface);color:var(--color-text);}
+        .stock-config-row input::placeholder {color:var(--color-text);opacity:0.6;}
         .stock-config-row input:focus {outline:none;border-color:var(--color-primary);}
         .urls-list-title {font-size:15px;font-weight:600;color:var(--color-primary);margin-bottom:10px;display:inline-block;}
         .urls-list-label {font-size:13px;color:var(--color-text);font-weight:500;margin-bottom:0;}
         .urls-clear-btn {display:inline-block;margin:0 0 0 13px;color:#ca1f26;cursor:pointer;font-size:13px;background:transparent;border:none;font-weight:500;}
-        .urls-list {margin:16px 0 0 0;padding:0;background:var(--color-list-bg);border-radius:8px;border:1px solid var(--color-border);max-height:120px;overflow-y:auto;box-sizing:border-box;}
-        .urls-list li {font-size:13px;padding:7px 12px;color:var(--color-text);background:transparent;border-bottom:1px solid var(--color-border);}
+        .urls-list {
+            margin:16px 0 0 0;
+            padding:0;
+            background:var(--color-list-bg);
+            border-radius:8px;
+            border:1px solid var(--color-border);
+            max-height:120px;
+            overflow-y:auto;
+            overflow-x:hidden;
+            box-sizing:border-box;
+            width: 100%;
+            position: relative;
+        }
+        .urls-list li {
+            font-size:13px;
+            padding:7px 12px;
+            color:var(--color-text);
+            background:transparent;
+            border-bottom:1px solid var(--color-border);
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            width: 100%;
+            box-sizing: border-box;
+            overflow: hidden;
+            min-height: 32px;
+        }
         .urls-list li:last-child {border-bottom:none;}
-        .toggle-settings-btn {background:var(--color-bg);color:var(--color-primary);border:1px solid var(--color-border);border-radius:7px;padding:7px 0;font-size:15px;font-weight:600;width:100%;margin-bottom:13px;cursor:pointer;transition:background 0.13s;}
-        .toggle-settings-btn.active {background:var(--color-primary);color:#fff;}
-        .settings-panel {background:var(--color-bg);border-radius:11px;padding:16px 12px 9px 12px;margin-bottom:18px;border:1px solid var(--color-border);box-shadow:0 1px 2px rgba(33,128,141,0.06);display:none;}
-        .settings-panel.visible {display:block;}
-        @media (max-width: 600px) {#stock-main-panel,.stock-panel-inner{min-width:98vw !important;max-width:99vw !important;padding:12px !important;}}
+        .url-text-container {
+            flex:1;
+            overflow:hidden;
+            min-width:0;
+            max-width: calc(100% - 30px);
+            position: relative;
+        }
+        .url-text {
+            display:block;
+            overflow:hidden;
+            text-overflow:ellipsis;
+            white-space:nowrap;
+            max-width:100%;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .url-text.truncated {position:relative;}
+        .url-text.truncated::after {
+            content:"";
+            position:absolute;
+            right:0;
+            top:0;
+            width:20px;
+            height:100%;
+            background:linear-gradient(to right, transparent, var(--color-list-bg));
+            pointer-events:none;
+        }
+        .url-remove-btn {
+            background:transparent;
+            border:none;
+            color:var(--color-primary);
+            cursor:pointer;
+            font-size:14px;
+            font-weight:bold;
+            margin-left:8px;
+            padding:2px 6px;
+            border-radius:3px;
+            transition:background 0.13s;
+            opacity:0.7;
+            flex-shrink: 0;
+            width: 22px;
+            height: 22px;
+            min-width: 22px;
+            min-height: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        .url-remove-btn:hover {
+            background:var(--color-primary);
+            color:#fff;
+            opacity:1;
+        }
+        .url-tooltip {
+            position:relative;
+            display:inline-block;
+            cursor:help;
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+
+        @media (max-width: 600px) {
+            #stock-main-panel {
+                width:95vw !important;
+                height:70vh !important;
+                padding:12px !important;
+                max-width: 95vw !important;
+                overflow: hidden !important;
+            }
+            .stock-panel-scroll {
+                height:calc(70vh - 48px) !important;
+                overflow-y: auto !important;
+                overflow-x: hidden !important;
+            }
+            .url-text-container {
+                max-width: calc(100% - 25px) !important;
+            }
+            .url-remove-btn {
+                width: 20px !important;
+                height: 20px !important;
+                min-width: 20px !important;
+                min-height: 20px !important;
+            }
+        }
     `;
 
     // ================ UI HELPERS ================
@@ -218,7 +367,7 @@
         const currentTickerBtn = document.createElement('button');
         currentTickerBtn.className = 'stock-current-ticker';
         currentTickerBtn.innerHTML = currentTicker
-            ? `<span style="margin-right:7px;">Open Chart For <span class="ticker-symbol">${currentTicker}</span></span><span>📈</span>`
+            ? `<span>Open Chart For ${currentTicker}</span><span>📈</span>`
             : `<span>No ticker detected in URL</span><span>⚠️</span>`;
         currentTickerBtn.disabled = !currentTicker;
         currentTickerBtn.addEventListener('click', () => {
@@ -229,7 +378,7 @@
 
         inner.appendChild(divider());
 
-        inner.appendChild(labelSpan(`${STOCK_TICKERS.length} tickers • ${Math.ceil(STOCK_TICKERS.length/BATCH_SIZE)} batches of ${BATCH_SIZE}`));
+        inner.appendChild(labelSpan(`Nifty ${STOCK_TICKERS.length} tickers • ${Math.ceil(STOCK_TICKERS.length/BATCH_SIZE)} batches of ${BATCH_SIZE}`));
         for (let i = 0; i < STOCK_TICKERS.length; i += BATCH_SIZE) {
             const batchNum = Math.floor(i/BATCH_SIZE) + 1,
                 tickersInBatch = STOCK_TICKERS.slice(i, Math.min(i+BATCH_SIZE, STOCK_TICKERS.length));
@@ -242,63 +391,63 @@
 
         inner.appendChild(divider());
 
-        // Settings toggle
-        const settingsToggle = document.createElement('button');
-        settingsToggle.className = 'toggle-settings-btn';
-        settingsToggle.textContent = '⚙ Settings';
-        settingsToggle.addEventListener('click', () => {
-            settingsToggle.classList.toggle('active');
-            settingsPanel.classList.toggle('visible');
-        });
-        inner.appendChild(settingsToggle);
-
-        // config form wrapped inside a hidden panel
-        const settingsPanel = document.createElement('div');
-        settingsPanel.className = 'settings-panel';
-        settingsPanel.appendChild(configForm(() => {
-            settingsPanel.classList.remove('visible');
-            settingsToggle.classList.remove('active');
-        }));
-        inner.appendChild(settingsPanel);
-
-        return inner;
-    }
-
-    function configForm(closePanelCallback) {
-        const wrap = document.createElement('div');
-        // Batch Size
+        // Integrated Settings Section
+        inner.appendChild(labelSpan('Settings'));
+        
+        // Batch Size Configuration
         const batchRow = document.createElement('div');
         batchRow.className = 'stock-config-row';
-        batchRow.innerHTML = `<label>Batch Size</label>
-            <input type="number" id="batch-size-input" value="${BATCH_SIZE}" min="1" max="50">`;
-        wrap.appendChild(batchRow);
-        // Tab Delay
+        const batchLabel = document.createElement('label');
+        batchLabel.textContent = 'Batch Size';
+        const batchInput = document.createElement('input');
+        batchInput.type = 'number';
+        batchInput.value = BATCH_SIZE;
+        batchInput.min = '1';
+        batchInput.max = '50';
+        batchInput.id = 'batch-size-input-charts';
+        batchRow.appendChild(batchLabel);
+        batchRow.appendChild(batchInput);
+        inner.appendChild(batchRow);
+
+        // Tab Delay Configuration
         const delayRow = document.createElement('div');
         delayRow.className = 'stock-config-row';
-        delayRow.innerHTML = `<label>Tab Delay (ms)</label>
-            <input type="number" id="tab-delay-input" value="${TAB_DELAY}" min="0" max="2000" step="50">`;
-        wrap.appendChild(delayRow);
+        const delayLabel = document.createElement('label');
+        delayLabel.textContent = 'Tab Delay (ms)';
+        const delayInput = document.createElement('input');
+        delayInput.type = 'number';
+        delayInput.value = TAB_DELAY;
+        delayInput.min = '0';
+        delayInput.max = '2000';
+        delayInput.step = '50';
+        delayInput.id = 'tab-delay-input-charts';
+        delayRow.appendChild(delayLabel);
+        delayRow.appendChild(delayInput);
+        inner.appendChild(delayRow);
+
+        // Save Settings Button
         const saveBtn = document.createElement('button');
         saveBtn.className = 'stock-btn';
         saveBtn.textContent = 'Save Settings';
         saveBtn.addEventListener('click', () => {
-            const newBatchSize = parseInt(document.getElementById('batch-size-input').value);
-            const newTabDelay = parseInt(document.getElementById('tab-delay-input').value);
+            const newBatchSize = parseInt(batchInput.value);
+            const newTabDelay = parseInt(delayInput.value);
             if (newBatchSize > 0 && newBatchSize <= 50 && newTabDelay >= 0 && newTabDelay <= 2000) {
                 GM_setValue('batchSize', newBatchSize);
                 GM_setValue('tabDelay', newTabDelay);
                 BATCH_SIZE = newBatchSize;
                 TAB_DELAY = newTabDelay;
                 showToast('Settings Saved!');
-                if (closePanelCallback) closePanelCallback();
             } else {
                 showToast('Invalid values.');
             }
         });
-        wrap.appendChild(saveBtn);
+        inner.appendChild(saveBtn);
 
-        return wrap;
+        return inner;
     }
+
+
 
     // ================ SAVED URLS TOOLS TAB PANEL ================
     function panelSavedUrlsTools() {
@@ -331,23 +480,40 @@
 
         inner.appendChild(divider());
 
-        // Settings toggle
-        const settingsToggle = document.createElement('button');
-        settingsToggle.className = 'toggle-settings-btn';
-        settingsToggle.textContent = '⚙ Settings';
-        settingsToggle.addEventListener('click', () => {
-            settingsToggle.classList.toggle('active');
-            settingsPanel.classList.toggle('visible');
-        });
-        inner.appendChild(settingsToggle);
+        // Integrated Settings Section
+        inner.appendChild(labelSpan('Settings'));
+        
+        // Tab Delay Configuration
+        const delayRow = document.createElement('div');
+        delayRow.className = 'stock-config-row';
+        const delayLabel = document.createElement('label');
+        delayLabel.textContent = 'Tab Delay (ms)';
+        const delayInput = document.createElement('input');
+        delayInput.type = 'number';
+        delayInput.value = TAB_DELAY;
+        delayInput.min = '0';
+        delayInput.max = '2000';
+        delayInput.step = '50';
+        delayInput.id = 'tab-delay-input-urls';
+        delayRow.appendChild(delayLabel);
+        delayRow.appendChild(delayInput);
+        inner.appendChild(delayRow);
 
-        const settingsPanel = document.createElement('div');
-        settingsPanel.className = 'settings-panel';
-        settingsPanel.appendChild(configFormUrls(() => {
-            settingsPanel.classList.remove('visible');
-            settingsToggle.classList.remove('active');
-        }));
-        inner.appendChild(settingsPanel);
+        // Save Settings Button
+        const saveBtn = document.createElement('button');
+        saveBtn.className = 'stock-btn batch';
+        saveBtn.textContent = 'Save Delay Setting';
+        saveBtn.addEventListener('click', () => {
+            const val = parseInt(delayInput.value);
+            if (val >= 0 && val <= 2000) {
+                GM_setValue('tabDelay', val);
+                TAB_DELAY = val;
+                showToast('Saved!');
+            } else {
+                showToast('Invalid delay');
+            }
+        });
+        inner.appendChild(saveBtn);
 
         // List label and clear
         const urlsListLabel = document.createElement('div');
@@ -383,42 +549,69 @@
             urlsList.innerHTML = '';
             SAVED_URLS = GM_getValue('savedUrls', []);
             urlCountSpan.textContent = `(${SAVED_URLS.length})`;
-            SAVED_URLS.forEach(url => {
+            SAVED_URLS.forEach((url, index) => {
                 const li = document.createElement('li');
-                li.textContent = url;
+                
+                // Create URL text container
+                const urlTextContainer = document.createElement('div');
+                urlTextContainer.className = 'url-text-container';
+                
+                // Create URL tooltip
+                const urlTooltip = document.createElement('div');
+                urlTooltip.className = 'url-tooltip';
+                urlTooltip.setAttribute('tabindex', '0');
+                urlTooltip.setAttribute('role', 'button');
+                urlTooltip.setAttribute('aria-expanded', 'false');
+                
+                // Create truncated URL text
+                const urlText = document.createElement('span');
+                urlText.className = 'url-text';
+                urlText.textContent = url;
+                urlText.setAttribute('aria-describedby', `url-tooltip-${index}`);
+                
+                // Optimized DOM assembly for immediate rendering
+                urlTooltip.appendChild(urlText);
+                urlTooltip.title = url;
+                urlTooltip.setAttribute('aria-label', url);
+                urlTextContainer.appendChild(urlTooltip);
+                
+                // Fast truncation check without timing delays
+                if (urlText.scrollWidth > urlText.clientWidth) {
+                    urlText.classList.add('truncated');
+                }
+                
+                // Create remove button
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'url-remove-btn';
+                removeBtn.textContent = '×';
+                removeBtn.title = 'Remove URL';
+                removeBtn.setAttribute('aria-label', `Remove URL: ${url}`);
+                
+                // Add click handler for remove functionality
+                removeBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    removeUrl(index);
+                });
+                
+                // Add to list item
+                li.appendChild(urlTextContainer);
+                li.appendChild(removeBtn);
                 urlsList.appendChild(li);
             });
+        }
+        
+        function removeUrl(index) {
+            SAVED_URLS.splice(index, 1);
+            GM_setValue('savedUrls', SAVED_URLS);
+            updateUrlsList();
+            showToast('URL removed');
         }
         updateUrlsList();
 
         return inner;
     }
 
-    function configFormUrls(closePanelCallback) {
-        const wrap = document.createElement('div');
-        // Delay
-        const delayRow = document.createElement('div');
-        delayRow.className = 'stock-config-row';
-        delayRow.innerHTML = `<label>Tab Delay (ms)</label>
-            <input type="number" id="tab-delay-urls-input" value="${TAB_DELAY}" min="0" max="2000" step="50">`;
-        wrap.appendChild(delayRow);
-        const saveBtn = document.createElement('button');
-        saveBtn.className = 'stock-btn batch';
-        saveBtn.textContent = 'Save Delay Setting';
-        saveBtn.addEventListener('click', () => {
-            const val = parseInt(document.getElementById('tab-delay-urls-input').value);
-            if (val >= 0 && val <= 2000) {
-                GM_setValue('tabDelay', val);
-                TAB_DELAY = val;
-                showToast('Saved!');
-                if (closePanelCallback) closePanelCallback();
-            } else {
-                showToast('Invalid delay');
-            }
-        });
-        wrap.appendChild(saveBtn);
-        return wrap;
-    }
+
 
     // ================ TAB BAR + PANEL INIT ================
     function createTabs() {
