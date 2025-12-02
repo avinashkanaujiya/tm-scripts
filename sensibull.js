@@ -11,33 +11,78 @@
 // ==/UserScript==
 
 (function () {
-    'use strict';
+  "use strict";
 
-    // ================ CONFIGURATION ================
-    const LIVE_OPTIONS_CHARTS_URL_TEMPLATE = 'https://web.sensibull.com/live-options-charts?tradingsymbol={TICKER}';
-    const LIVE_SPOT_CHARTS_URL_TEMPLATE = 'https://web.sensibull.com/chart?tradingSymbol={TICKER}';
-    const OPTION_CHAIN_URL_TEMPLATE = 'https://web.sensibull.com/option-chain?tradingsymbol={TICKER}';
-    const ANALYSIS_TABS = ['Charts Tools', 'Saved Tickers', 'Analysis'];
-    const STOCK_TICKERS = [
-        'ADANIPORTS', 'ASIANPAINT', 'AXISBANK', 'BAJAJ-AUTO', 'BAJFINANCE', 'BAJAJFINSV',
-        'BANDHANBNK', 'BANKBARODA', 'BEL', 'BHARTIARTL', 'BPCL', 'BRITANNIA', 'CIPLA', 
-        'COALINDIA', 'DIVISLAB', 'DRREDDY', 'EICHERMOT', 'GRASIM', 'HCLTECH', 'HDFCBANK',
-        'HDFCLIFE', 'HEROMOTOCO', 'HINDALCO', 'HINDUNILVR', 'ICICIBANK', 'INDIGO', 
-        'INDUSINDBK', 'INFY', 'ITC', 'JSWSTEEL', 'KOTAKBANK', 'LT', 'M&M', 'MARUTI',
-        'NESTLEIND', 'NTPC', 'ONGC', 'POWERGRID', 'RELIANCE', 'SBIN', 'SHREECEM',
-        'SBILIFE', 'SUNPHARMA', 'TATACONSUM', 'TATASTEEL', 'TCS', 'TECHM', 'TITAN',
-        'ULTRACEMCO', 'WIPRO'
-    ];
-    const VALID_TICKER_PATTERN = /^[A-Z0-9&-]+$/;
+  // ================ CONFIGURATION ================
+  const LIVE_OPTIONS_CHARTS_URL_TEMPLATE =
+    "https://web.sensibull.com/live-options-charts?tradingsymbol={TICKER}";
+  const LIVE_SPOT_CHARTS_URL_TEMPLATE =
+    "https://web.sensibull.com/chart?tradingSymbol={TICKER}";
+  const OPTION_CHAIN_URL_TEMPLATE =
+    "https://web.sensibull.com/option-chain?tradingsymbol={TICKER}";
+  const ANALYSIS_TABS = ["Charts Tools", "Saved Tickers", "Analysis"];
+  const STOCK_TICKERS = [
+    "ADANIPORTS",
+    "ASIANPAINT",
+    "AXISBANK",
+    "BAJAJ-AUTO",
+    "BAJFINANCE",
+    "BAJAJFINSV",
+    "BANDHANBNK",
+    "BANKBARODA",
+    "BEL",
+    "BHARTIARTL",
+    "BPCL",
+    "BRITANNIA",
+    "CIPLA",
+    "COALINDIA",
+    "DIVISLAB",
+    "DRREDDY",
+    "EICHERMOT",
+    "GRASIM",
+    "HCLTECH",
+    "HDFCBANK",
+    "HDFCLIFE",
+    "HEROMOTOCO",
+    "HINDALCO",
+    "HINDUNILVR",
+    "ICICIBANK",
+    "INDIGO",
+    "INDUSINDBK",
+    "INFY",
+    "ITC",
+    "JSWSTEEL",
+    "KOTAKBANK",
+    "LT",
+    "M&M",
+    "MARUTI",
+    "NESTLEIND",
+    "NTPC",
+    "ONGC",
+    "POWERGRID",
+    "RELIANCE",
+    "SBIN",
+    "SHREECEM",
+    "SBILIFE",
+    "SUNPHARMA",
+    "TATACONSUM",
+    "TATASTEEL",
+    "TCS",
+    "TECHM",
+    "TITAN",
+    "ULTRACEMCO",
+    "WIPRO",
+  ];
+  const VALID_TICKER_PATTERN = /^[A-Z0-9&-]+$/;
 
-    let BATCH_SIZE = GM_getValue('batchSize', 10);
-    let TAB_DELAY = GM_getValue('tabDelay', 200);
-    let SAVED_TICKERS = GM_getValue('savedTickers', []);
-    let LAST_TAB_INDEX = GM_getValue('lastTabIndex', 0);
-    let PANEL_VISIBLE = GM_getValue('panelVisible', false);
+  let BATCH_SIZE = GM_getValue("batchSize", 10);
+  let TAB_DELAY = GM_getValue("tabDelay", 200);
+  let SAVED_TICKERS = GM_getValue("savedTickers", []);
+  let LAST_TAB_INDEX = GM_getValue("lastTabIndex", 0);
+  let PANEL_VISIBLE = GM_getValue("panelVisible", false);
 
-    // ================ STYLES ================
-    const styles = `
+  // ================ STYLES ================
+  const styles = `
         :root {
             --color-primary: #21808d;
             --color-bg: #fcfcf9;
@@ -161,7 +206,7 @@
         }
         .stock-batch-btn .badge { background:rgba(255,255,255,0.20);padding:2px 8px;border-radius:13px;font-size:12px;margin-left:auto;}
         .stock-batch-btn:last-child {margin-bottom:0;}
-        
+
         /* Horizontal button layout for URLs tab */
         .urls-button-container {
             display: grid;
@@ -469,617 +514,660 @@
         }
     `;
 
-    // ================ UI HELPERS ================
-    function divider() {
-        const d = document.createElement('div');
-        d.className = 'divider';
-        return d;
-    }
-    function labelSpan(text) {
-        const s = document.createElement('span');
-        s.className = 'stock-info-label';
-        s.textContent = text;
-        return s;
-    }
-    function showToast(message) {
-        const toast = document.getElementById('stock-toast');
-        if (!toast) return;
-        toast.textContent = message;
-        toast.style.opacity = '1';
-        setTimeout(() => { toast.style.opacity = '0'; }, 2000);
-    }
-
-    // ================ URL OPEN HELPERS ================
-    function openUrl(url, options = { active: false, insert: true }) {
-        if (typeof GM_openInTab !== 'undefined') {
-            GM_openInTab(url, { active: options.active, insert: options.insert });
-        } else {
-            const win = window.open(url, '_blank');
-            if (options.active && win) win.focus();
-        }
-    }
-    function openOptionChain(ticker, active = true) {
-        openUrl(OPTION_CHAIN_URL_TEMPLATE.replace('{TICKER}', ticker), { active, insert: true });
-    }
-    function openLiveOptionsChart(ticker, active = true) {
-        openUrl(LIVE_OPTIONS_CHARTS_URL_TEMPLATE.replace('{TICKER}', ticker), { active, insert: true });
-    }
-    function openSpotChart(ticker, active = true) {
-        openUrl(LIVE_SPOT_CHARTS_URL_TEMPLATE.replace('{TICKER}', ticker), { active, insert: true });
-    }
-    function openTickerOptionChain(ticker, active = true) {
-        if (!ticker) return;
-        openOptionChain(ticker, active);
-    }
-    function openTickerLiveOptions(ticker, active = true) {
-        if (!ticker) return;
-        openLiveOptionsChart(ticker, active);
-    }
-    function openTickerSpotChart(ticker, active = true) {
-        if (!ticker) return;
-        openSpotChart(ticker, active);
-    }
-
-    function createDelaySettingRow(id) {
-        const row = document.createElement('div');
-        row.className = 'stock-config-row';
-        const label = document.createElement('label');
-        label.textContent = 'Tab Delay (ms)';
-        const input = document.createElement('input');
-        input.type = 'number';
-        input.value = TAB_DELAY;
-        input.min = '0';
-        input.max = '2000';
-        input.step = '50';
-        input.id = id;
-        row.appendChild(label);
-        row.appendChild(input);
-        return { row, input };
-    }
-    function extractTickerFromURL() {
-        const url = window.location.href;
-        const patterns = [
-            /tradingsymbol=([A-Z0-9&-]+)/i,
-            /tradingSymbol=([A-Z0-9&-]+)/i,
-            /symbol=([A-Z0-9&-]+)/i,
-            /\/([A-Z0-9&-]+)(?:\/|\?|$)/
-        ];
-        for (const pattern of patterns) {
-            const match = url.match(pattern);
-            if (match && match[1]) {
-                return decodeURIComponent(match[1]);
-            }
-        }
-        return null;
-    }
-    function parseTickerInput(rawInput) {
-        if (rawInput == null) return [];
-        let source = rawInput;
-        if (typeof rawInput === 'string') {
-            const trimmed = rawInput.trim();
-            if (!trimmed) return [];
-            try {
-                const parsed = JSON.parse(trimmed);
-                if (Array.isArray(parsed)) {
-                    source = parsed;
-                } else if (typeof parsed === 'string') {
-                    source = parsed.split(/[\n\r,]+/);
-                } else {
-                    source = trimmed.split(/[\n\r,]+/);
-                }
-            } catch (err) {
-                source = trimmed.split(/[\n\r,]+/);
-            }
-        } else if (!Array.isArray(rawInput)) {
-            source = [rawInput];
-        }
-        if (typeof source === 'string') {
-            source = source.split(/[\n\r,]+/);
-        }
-        return source
-            .map((value) => String(value).trim().toUpperCase())
-            .filter((value) => value && VALID_TICKER_PATTERN.test(value));
-    }
-    function fallbackClipboardCopy(text) {
-        const textarea = document.createElement('textarea');
-        textarea.value = text;
-        textarea.style.position = 'fixed';
-        textarea.style.top = '-9999px';
-        document.body.appendChild(textarea);
-        textarea.focus();
-        textarea.select();
-        const successful = document.execCommand('copy');
-        document.body.removeChild(textarea);
-        if (!successful) {
-            throw new Error('Copy command failed');
-        }
-    }
-    function copyTextToClipboard(text) {
-        if (typeof navigator !== 'undefined' && navigator.clipboard && navigator.clipboard.writeText) {
-            return navigator.clipboard.writeText(text);
-        }
-        return new Promise((resolve, reject) => {
-            try {
-                fallbackClipboardCopy(text);
-                resolve();
-            } catch (error) {
-                reject(error);
-            }
-        });
-    }
-    function openCurrentTicker(ticker) {
-        showToast(`Opening chart for ${ticker}`);
-        openSpotChart(ticker, true);
-    }
-    function openBatch(tickers, batchNum) {
-        showToast(`Batch ${batchNum}: Opening ${tickers.length} tabs`);
-        tickers.forEach((ticker, index) => {
-            const url = LIVE_OPTIONS_CHARTS_URL_TEMPLATE.replace('{TICKER}', ticker);
-            setTimeout(() => {
-                if (typeof GM_openInTab !== 'undefined') {
-                    GM_openInTab(url, { active: false, insert: true });
-                } else {
-                    window.open(url, '_blank');
-                }
-            }, index * TAB_DELAY);
-        });
-    }
-    function batchOpenTickers(tickers, opener, label) {
-        if (!tickers.length) {
-            showToast(`No tickers to open for ${label}`);
-            return;
-        }
-
-        tickers.forEach((ticker, idx) => {
-            setTimeout(() => opener(ticker), idx * TAB_DELAY);
-        });
-        showToast(`Opening ${tickers.length} ${label}`);
-    }
-
-    // ================ CHARTS TOOLS TAB PANEL ================
-    function panelChartsTools() {
-        const inner = document.createElement('div');
-        inner.className = 'stock-panel-inner';
-
-        // Current chart open (centered)
-        const currentTicker = extractTickerFromURL();
-        const currentTickerBtn = document.createElement('button');
-        currentTickerBtn.className = 'stock-current-ticker';
-        currentTickerBtn.innerHTML = currentTicker
-            ? `<span>Open Chart For ${currentTicker}</span><span>📈</span>`
-            : `<span>No ticker detected in URL</span><span>⚠️</span>`;
-        currentTickerBtn.disabled = !currentTicker;
-        currentTickerBtn.addEventListener('click', () => {
-            if (!currentTicker) return;
-            openCurrentTicker(currentTicker);
-        });
-        inner.appendChild(currentTickerBtn);
-
-        inner.appendChild(divider());
-
-        inner.appendChild(labelSpan(`Nifty ${STOCK_TICKERS.length} tickers • ${Math.ceil(STOCK_TICKERS.length/BATCH_SIZE)} batches of ${BATCH_SIZE}`));
-        for (let i = 0; i < STOCK_TICKERS.length; i += BATCH_SIZE) {
-            const batchNum = Math.floor(i/BATCH_SIZE) + 1,
-                tickersInBatch = STOCK_TICKERS.slice(i, Math.min(i+BATCH_SIZE, STOCK_TICKERS.length));
-            const btn = document.createElement('button');
-            btn.className = 'stock-batch-btn';
-            btn.innerHTML = `<span style="flex-shrink:0;">Batch ${batchNum}: ${tickersInBatch[0]} - ${tickersInBatch[tickersInBatch.length-1]}</span><span class="badge">${tickersInBatch.length}</span>`;
-            btn.addEventListener('click', () => openBatch(tickersInBatch, batchNum));
-            inner.appendChild(btn);
-        }
-
-        inner.appendChild(divider());
-
-        // Integrated Settings Section
-        inner.appendChild(labelSpan('Settings'));
-        
-        // Batch Size Configuration
-        const batchRow = document.createElement('div');
-        batchRow.className = 'stock-config-row';
-        const batchLabel = document.createElement('label');
-        batchLabel.textContent = 'Batch Size';
-        const batchInput = document.createElement('input');
-        batchInput.type = 'number';
-        batchInput.value = BATCH_SIZE;
-        batchInput.min = '1';
-        batchInput.max = '50';
-        batchInput.id = 'batch-size-input-charts';
-        batchRow.appendChild(batchLabel);
-        batchRow.appendChild(batchInput);
-        inner.appendChild(batchRow);
-
-        const { row: delayRow, input: delayInput } = createDelaySettingRow('tab-delay-input');
-        inner.appendChild(delayRow);
-        delayRow.querySelector('label').textContent = 'Tab Delay (ms)';
-
-        // Save Settings Button
-        const saveBtn = document.createElement('button');
-        saveBtn.className = 'stock-btn';
-        saveBtn.textContent = 'Save Settings';
-        saveBtn.addEventListener('click', () => {
-            const newBatchSize = parseInt(batchInput.value);
-            const newTabDelay = parseInt(delayInput.value);
-            if (newBatchSize > 0 && newBatchSize <= 50 && newTabDelay >= 0 && newTabDelay <= 2000) {
-                GM_setValue('batchSize', newBatchSize);
-                GM_setValue('tabDelay', newTabDelay);
-                BATCH_SIZE = newBatchSize;
-                TAB_DELAY = newTabDelay;
-                showToast('Settings Saved!');
-            } else {
-                showToast('Invalid values.');
-            }
-        });
-        inner.appendChild(saveBtn);
-
-        return inner;
-    }
-    function panelAnalysisTools() {
-        const inner = document.createElement('div');
-        inner.className = 'stock-panel-inner';
-
-        const currentTicker = extractTickerFromURL();
-        const status = document.createElement('div');
-        status.className = 'stock-info-label';
-        status.textContent = currentTicker ? `Ticker detected: ${currentTicker}` : 'No ticker detected in current URL';
-        inner.appendChild(status);
-
-        const buttonLabels = [
-            { label: 'Open Option Chain', action: () => currentTicker && openOptionChain(currentTicker) },
-            { label: 'Open Live Options Chart', action: () => currentTicker && openLiveOptionsChart(currentTicker) },
-            { label: 'Open Spot Chart', action: () => currentTicker && openSpotChart(currentTicker, true) }
-        ];
-
-        buttonLabels.forEach(({ label, action }) => {
-            const btn = document.createElement('button');
-            btn.className = 'stock-btn';
-            btn.textContent = label;
-            btn.disabled = !currentTicker;
-            btn.addEventListener('click', () => {
-                action(true);
-            });
-            inner.appendChild(btn);
-        });
-
-        return inner;
-    }
-
-
-
-
-    // ================ SAVED URLS TOOLS TAB PANEL ================
-    function panelSavedUrlsTools() {
-        const inner = document.createElement('div');
-        inner.className = 'stock-panel-inner';
-
-        // Horizontal button container
-        const buttonContainer = document.createElement('div');
-        buttonContainer.className = 'urls-button-container';
-
-        // Save current ticker button
-        const saveThisTickerBtn = document.createElement('button');
-        saveThisTickerBtn.className = 'stock-btn urls-action-btn';
-        saveThisTickerBtn.textContent = 'Save This Ticker';
-        saveThisTickerBtn.addEventListener('click', () => {
-            const ticker = extractTickerFromURL();
-            if (!ticker) {
-                showToast('No ticker detected');
-                return;
-            }
-            SAVED_TICKERS = GM_getValue('savedTickers', []);
-            if (SAVED_TICKERS.includes(ticker)) {
-                showToast('Ticker already saved');
-                return;
-            }
-            SAVED_TICKERS.push(ticker);
-            GM_setValue('savedTickers', SAVED_TICKERS);
-            showToast('Ticker saved!');
-            updateTickerList();
-        });
-        buttonContainer.appendChild(saveThisTickerBtn);
-
-        const openBatchTickerBtn = document.createElement('button');
-        openBatchTickerBtn.className = 'stock-btn batch urls-action-btn';
-        openBatchTickerBtn.textContent = 'Open All Live Charts';
-        openBatchTickerBtn.addEventListener('click', () => {
-            SAVED_TICKERS = GM_getValue('savedTickers', []);
-            batchOpenTickers(SAVED_TICKERS, openTickerSpotChart, 'spot charts');
-        });
-        buttonContainer.appendChild(openBatchTickerBtn);
-
-        inner.appendChild(buttonContainer);
-
-        inner.appendChild(divider());
-
-        const listHeader = document.createElement('div');
-        listHeader.className = 'urls-list-label';
-        listHeader.textContent = 'Saved Tickers: ';
-
-        const tickerCountSpan = document.createElement('span');
-        tickerCountSpan.style.fontWeight = 'bold';
-        tickerCountSpan.style.marginLeft = '3px';
-        listHeader.appendChild(tickerCountSpan);
-
-        const clearBtn = document.createElement('button');
-        clearBtn.className = 'urls-clear-btn';
-        clearBtn.textContent = "Clear";
-        clearBtn.addEventListener('click', () => {
-            GM_setValue('savedTickers', []);
-            SAVED_TICKERS = [];
-            showToast('Saved tickers cleared');
-            updateTickerList();
-        });
-        listHeader.appendChild(clearBtn);
-
-        inner.appendChild(listHeader);
-
-        const tickerList = document.createElement('ul');
-        tickerList.className = 'urls-list';
-        inner.appendChild(tickerList);
-
-        inner.appendChild(buildImportExportCard());
-
-        function actionButton(label, handler) {
-            const btn = document.createElement('button');
-            btn.className = 'urls-action-btn ticker-action-btn';
-            btn.textContent = label;
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                handler();
-            });
-            return btn;
-        }
-
-        function buildImportExportCard() {
-            const card = document.createElement('div');
-            card.className = 'urls-import-card';
-
-            const toggleBtn = document.createElement('button');
-            toggleBtn.className = 'stock-btn urls-import-toggle';
-            toggleBtn.textContent = 'Show Import / Export';
-
-            const section = document.createElement('div');
-            section.className = 'urls-import-section';
-
-            const importTitle = document.createElement('span');
-            importTitle.className = 'urls-list-title';
-            importTitle.textContent = 'Import / Export';
-            section.appendChild(importTitle);
-
-            const helper = document.createElement('div');
-            helper.className = 'urls-import-helper';
-            helper.textContent = 'Paste JSON array or comma/newline separated tickers. Export copies current list to clipboard.';
-            section.appendChild(helper);
-
-            const textArea = document.createElement('textarea');
-            textArea.className = 'urls-import-text';
-            textArea.placeholder = 'TATASTEEL, SBIN, INFY or ["TATASTEEL","SBIN"]';
-            section.appendChild(textArea);
-
-            const importActions = document.createElement('div');
-            importActions.className = 'urls-import-actions';
-
-            const importBtn = document.createElement('button');
-            importBtn.className = 'stock-btn urls-import-btn';
-            importBtn.textContent = 'Import';
-            importBtn.addEventListener('click', () => {
-                const parsed = parseTickerInput(textArea.value);
-                if (!parsed.length) {
-                    showToast('No valid tickers to import');
-                    return;
-                }
-                const current = new Set(GM_getValue('savedTickers', []));
-                parsed.forEach((ticker) => current.add(ticker));
-                SAVED_TICKERS = Array.from(current);
-                GM_setValue('savedTickers', SAVED_TICKERS);
-                showToast(`Imported ${parsed.length} tickers`);
-                updateTickerList();
-                textArea.value = '';
-            });
-            importActions.appendChild(importBtn);
-
-            const exportBtn = document.createElement('button');
-            exportBtn.className = 'stock-btn urls-import-btn';
-            exportBtn.textContent = 'Export';
-            exportBtn.addEventListener('click', async () => {
-                SAVED_TICKERS = GM_getValue('savedTickers', []);
-                if (!SAVED_TICKERS.length) {
-                    showToast('No tickers to export');
-                    return;
-                }
-                try {
-                    await copyTextToClipboard(JSON.stringify(SAVED_TICKERS, null, 2));
-                    showToast('Tickers copied to clipboard');
-                } catch (error) {
-                    console.error('Clipboard copy failed', error);
-                    showToast('Clipboard not available');
-                }
-            });
-            importActions.appendChild(exportBtn);
-
-            toggleBtn.addEventListener('click', () => {
-                const isVisible = section.classList.toggle('visible');
-                toggleBtn.textContent = isVisible ? 'Hide Import / Export' : 'Show Import / Export';
-            });
-
-            section.appendChild(importActions);
-            card.appendChild(toggleBtn);
-            card.appendChild(section);
-
-            return card;
-        }
-
-        function updateTickerList() {
-            tickerList.innerHTML = '';
-            SAVED_TICKERS = GM_getValue('savedTickers', []);
-            tickerCountSpan.textContent = `(${SAVED_TICKERS.length})`;
-            SAVED_TICKERS.forEach((ticker, index) => {
-                const li = document.createElement('li');
-                li.classList.add('ticker-row');
-
-                const meta = document.createElement('div');
-                meta.className = 'ticker-meta';
-
-                const countBadge = document.createElement('span');
-                countBadge.className = 'ticker-index';
-                countBadge.textContent = index + 1;
-
-                const label = document.createElement('span');
-                label.className = 'url-text ticker-symbol';
-                label.textContent = ticker;
-
-                meta.appendChild(countBadge);
-                meta.appendChild(label);
-                li.appendChild(meta);
-
-                const actionsWrapper = document.createElement('div');
-                actionsWrapper.className = 'ticker-actions';
-                actionsWrapper.appendChild(actionButton('Option Chain', () => openTickerOptionChain(ticker)));
-                actionsWrapper.appendChild(actionButton('Live Options', () => openTickerLiveOptions(ticker)));
-                actionsWrapper.appendChild(actionButton('Spot Chart', () => openTickerSpotChart(ticker)));
-
-                const removeBtn = document.createElement('button');
-                removeBtn.className = 'url-remove-btn';
-                removeBtn.textContent = '×';
-                removeBtn.title = `Remove ${ticker}`;
-                removeBtn.addEventListener('click', (e) => {
-                    e.stopPropagation();
-                    removeTicker(index);
-                });
-
-                li.appendChild(actionsWrapper);
-                li.appendChild(removeBtn);
-                tickerList.appendChild(li);
-            });
-
-            const existingCard = inner.querySelector('.urls-import-card');
-            if (!existingCard) {
-                const card = buildImportExportCard();
-                inner.appendChild(card);
-            } else if (!existingCard.isConnected) {
-                inner.appendChild(existingCard);
-            }
-        }
-
-        function removeTicker(index) {
-            SAVED_TICKERS.splice(index, 1);
-            GM_setValue('savedTickers', SAVED_TICKERS);
-            updateTickerList();
-            showToast('Ticker removed');
-        }
-        updateTickerList();
-
-        return inner;
-    }
-
-
-
-    // ================ TAB BAR + PANEL INIT ================
-    function createTabs() {
-        const tabBar = document.createElement('div');
-        tabBar.id = 'stock-tab-bar';
-
-        const chartsTab = document.createElement('button');
-        chartsTab.textContent = "Charts Tools";
-        chartsTab.className = 'stock-tab-btn active';
-
-        const urlsTab = document.createElement('button');
-        urlsTab.textContent = "Saved Tickers";
-        urlsTab.className = 'stock-tab-btn';
-
-        const analysisTab = document.createElement('button');
-        analysisTab.textContent = 'Analysis';
-        analysisTab.className = 'stock-tab-btn';
-
-        tabBar.appendChild(chartsTab);
-        tabBar.appendChild(urlsTab);
-        tabBar.appendChild(analysisTab);
-
-        const scrollPanel = document.createElement('div');
-        scrollPanel.className = 'stock-panel-scroll';
-
-        const switchTab = (index, persist = true) => {
-            chartsTab.classList.toggle('active', index === 0);
-            urlsTab.classList.toggle('active', index === 1);
-            analysisTab.classList.toggle('active', index === 2);
-            scrollPanel.innerHTML = '';
-            LAST_TAB_INDEX = index;
-            if (persist) GM_setValue('lastTabIndex', index);
-            if (index === 0) {
-                scrollPanel.appendChild(panelChartsTools());
-            } else if (index === 1) {
-                scrollPanel.appendChild(panelSavedUrlsTools());
-            } else {
-                scrollPanel.appendChild(panelAnalysisTools());
-            }
-        };
-        chartsTab.addEventListener('click', () => switchTab(0));
-        urlsTab.addEventListener('click', () => switchTab(1));
-        analysisTab.addEventListener('click', () => switchTab(2));
-
-        return { tabBar, scrollPanel, switchTab };
-    }
-
-    // Main UI setup
-    function createUI() {
-        const styleSheet = document.createElement('style');
-        styleSheet.textContent = styles;
-        document.head.appendChild(styleSheet);
-
-        const widget = document.createElement('div');
-        widget.id = 'stock-ticker-widget';
-
-        const toggleBtn = document.createElement('button');
-        toggleBtn.id = 'stock-toggle-btn';
-        toggleBtn.innerHTML = '📊';
-        toggleBtn.title = 'Stock Ticker Tools';
-
-        const mainOuterPanel = document.createElement('div');
-        mainOuterPanel.id = 'stock-main-panel';
-
-        const { tabBar, scrollPanel, switchTab } = createTabs();
-        mainOuterPanel.appendChild(tabBar);
-        mainOuterPanel.appendChild(scrollPanel);
-
-        switchTab(LAST_TAB_INDEX, false);
-
-        if (PANEL_VISIBLE) {
-            mainOuterPanel.classList.add('visible');
-        }
-
-        const toast = document.createElement('div');
-        toast.id = 'stock-toast';
-        toast.textContent = '';
-        document.body.appendChild(toast);
-
-        toggleBtn.addEventListener('click', () => {
-            const isVisible = mainOuterPanel.classList.toggle('visible');
-            PANEL_VISIBLE = isVisible;
-            GM_setValue('panelVisible', isVisible);
-        });
-        widget.addEventListener('click', (e) => e.stopPropagation());
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                mainOuterPanel.classList.remove('visible');
-                PANEL_VISIBLE = false;
-                GM_setValue('panelVisible', false);
-            }
-        });
-        document.addEventListener('click', (e) => {
-            if (!widget.contains(e.target)) {
-                mainOuterPanel.classList.remove('visible');
-                PANEL_VISIBLE = false;
-                GM_setValue('panelVisible', false);
-            }
-        });
-
-        widget.appendChild(toggleBtn);
-        widget.appendChild(mainOuterPanel);
-        document.body.appendChild(widget);
-    }
-
-    if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', createUI);
+  // ================ UI HELPERS ================
+  function divider() {
+    const d = document.createElement("div");
+    d.className = "divider";
+    return d;
+  }
+  function labelSpan(text) {
+    const s = document.createElement("span");
+    s.className = "stock-info-label";
+    s.textContent = text;
+    return s;
+  }
+  function showToast(message) {
+    const toast = document.getElementById("stock-toast");
+    if (!toast) return;
+    toast.textContent = message;
+    toast.style.opacity = "1";
+    setTimeout(() => {
+      toast.style.opacity = "0";
+    }, 2000);
+  }
+
+  // ================ URL OPEN HELPERS ================
+  function openUrl(url, options = { active: false, insert: true }) {
+    if (typeof GM_openInTab !== "undefined") {
+      GM_openInTab(url, { active: options.active, insert: options.insert });
     } else {
-        createUI();
+      const win = window.open(url, "_blank");
+      if (options.active && win) win.focus();
     }
+  }
+  function openOptionChain(ticker, active = true) {
+    openUrl(OPTION_CHAIN_URL_TEMPLATE.replace("{TICKER}", ticker), {
+      active,
+      insert: true,
+    });
+  }
+  function openLiveOptionsChart(ticker, active = true) {
+    openUrl(LIVE_OPTIONS_CHARTS_URL_TEMPLATE.replace("{TICKER}", ticker), {
+      active,
+      insert: true,
+    });
+  }
+  function openSpotChart(ticker, active = true) {
+    openUrl(LIVE_SPOT_CHARTS_URL_TEMPLATE.replace("{TICKER}", ticker), {
+      active,
+      insert: true,
+    });
+  }
+  function openTickerOptionChain(ticker, active = true) {
+    if (!ticker) return;
+    openOptionChain(ticker, active);
+  }
+  function openTickerLiveOptions(ticker, active = true) {
+    if (!ticker) return;
+    openLiveOptionsChart(ticker, active);
+  }
+  function openTickerSpotChart(ticker, active = true) {
+    if (!ticker) return;
+    openSpotChart(ticker, active);
+  }
+
+  function createDelaySettingRow(id) {
+    const row = document.createElement("div");
+    row.className = "stock-config-row";
+    const label = document.createElement("label");
+    label.textContent = "Tab Delay (ms)";
+    const input = document.createElement("input");
+    input.type = "number";
+    input.value = TAB_DELAY;
+    input.min = "0";
+    input.max = "2000";
+    input.step = "50";
+    input.id = id;
+    row.appendChild(label);
+    row.appendChild(input);
+    return { row, input };
+  }
+  function extractTickerFromURL() {
+    const url = window.location.href;
+    const patterns = [
+      /tradingsymbol=([A-Z0-9&-]+)/i,
+      /tradingSymbol=([A-Z0-9&-]+)/i,
+      /symbol=([A-Z0-9&-]+)/i,
+      /\/([A-Z0-9&-]+)(?:\/|\?|$)/,
+    ];
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return decodeURIComponent(match[1]);
+      }
+    }
+    return null;
+  }
+  function parseTickerInput(rawInput) {
+    if (rawInput == null) return [];
+    let source = rawInput;
+    if (typeof rawInput === "string") {
+      const trimmed = rawInput.trim();
+      if (!trimmed) return [];
+      try {
+        const parsed = JSON.parse(trimmed);
+        if (Array.isArray(parsed)) {
+          source = parsed;
+        } else if (typeof parsed === "string") {
+          source = parsed.split(/[\n\r,]+/);
+        } else {
+          source = trimmed.split(/[\n\r,]+/);
+        }
+      } catch (err) {
+        source = trimmed.split(/[\n\r,]+/);
+      }
+    } else if (!Array.isArray(rawInput)) {
+      source = [rawInput];
+    }
+    if (typeof source === "string") {
+      source = source.split(/[\n\r,]+/);
+    }
+    return source
+      .map((value) => String(value).trim().toUpperCase())
+      .filter((value) => value && VALID_TICKER_PATTERN.test(value));
+  }
+  function fallbackClipboardCopy(text) {
+    const textarea = document.createElement("textarea");
+    textarea.value = text;
+    textarea.style.position = "fixed";
+    textarea.style.top = "-9999px";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    const successful = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    if (!successful) {
+      throw new Error("Copy command failed");
+    }
+  }
+  function copyTextToClipboard(text) {
+    if (
+      typeof navigator !== "undefined" &&
+      navigator.clipboard &&
+      navigator.clipboard.writeText
+    ) {
+      return navigator.clipboard.writeText(text);
+    }
+    return new Promise((resolve, reject) => {
+      try {
+        fallbackClipboardCopy(text);
+        resolve();
+      } catch (error) {
+        reject(error);
+      }
+    });
+  }
+  function openCurrentTicker(ticker) {
+    showToast(`Opening chart for ${ticker}`);
+    openSpotChart(ticker, true);
+  }
+  function openBatch(tickers, batchNum) {
+    showToast(`Batch ${batchNum}: Opening ${tickers.length} tabs`);
+    tickers.forEach((ticker, index) => {
+      const url = LIVE_OPTIONS_CHARTS_URL_TEMPLATE.replace("{TICKER}", ticker);
+      setTimeout(() => {
+        if (typeof GM_openInTab !== "undefined") {
+          GM_openInTab(url, { active: false, insert: true });
+        } else {
+          window.open(url, "_blank");
+        }
+      }, index * TAB_DELAY);
+    });
+  }
+  function batchOpenTickers(tickers, opener, label) {
+    if (!tickers.length) {
+      showToast(`No tickers to open for ${label}`);
+      return;
+    }
+
+    tickers.forEach((ticker, idx) => {
+      setTimeout(() => opener(ticker), idx * TAB_DELAY);
+    });
+    showToast(`Opening ${tickers.length} ${label}`);
+  }
+
+  // ================ CHARTS TOOLS TAB PANEL ================
+  function panelChartsTools() {
+    const inner = document.createElement("div");
+    inner.className = "stock-panel-inner";
+
+    // Current chart open (centered)
+    const currentTicker = extractTickerFromURL();
+    const currentTickerBtn = document.createElement("button");
+    currentTickerBtn.className = "stock-current-ticker";
+    currentTickerBtn.innerHTML = currentTicker
+      ? `<span>Open Chart For ${currentTicker}</span><span>📈</span>`
+      : `<span>No ticker detected in URL</span><span>⚠️</span>`;
+    currentTickerBtn.disabled = !currentTicker;
+    currentTickerBtn.addEventListener("click", () => {
+      if (!currentTicker) return;
+      openCurrentTicker(currentTicker);
+    });
+    inner.appendChild(currentTickerBtn);
+
+    inner.appendChild(divider());
+
+    inner.appendChild(
+      labelSpan(
+        `Nifty ${STOCK_TICKERS.length} tickers • ${Math.ceil(STOCK_TICKERS.length / BATCH_SIZE)} batches of ${BATCH_SIZE}`,
+      ),
+    );
+    for (let i = 0; i < STOCK_TICKERS.length; i += BATCH_SIZE) {
+      const batchNum = Math.floor(i / BATCH_SIZE) + 1,
+        tickersInBatch = STOCK_TICKERS.slice(
+          i,
+          Math.min(i + BATCH_SIZE, STOCK_TICKERS.length),
+        );
+      const btn = document.createElement("button");
+      btn.className = "stock-batch-btn";
+      btn.innerHTML = `<span style="flex-shrink:0;">Batch ${batchNum}: ${tickersInBatch[0]} - ${tickersInBatch[tickersInBatch.length - 1]}</span><span class="badge">${tickersInBatch.length}</span>`;
+      btn.addEventListener("click", () => openBatch(tickersInBatch, batchNum));
+      inner.appendChild(btn);
+    }
+
+    inner.appendChild(divider());
+
+    // Integrated Settings Section
+    inner.appendChild(labelSpan("Settings"));
+
+    // Batch Size Configuration
+    const batchRow = document.createElement("div");
+    batchRow.className = "stock-config-row";
+    const batchLabel = document.createElement("label");
+    batchLabel.textContent = "Batch Size";
+    const batchInput = document.createElement("input");
+    batchInput.type = "number";
+    batchInput.value = BATCH_SIZE;
+    batchInput.min = "1";
+    batchInput.max = "50";
+    batchInput.id = "batch-size-input-charts";
+    batchRow.appendChild(batchLabel);
+    batchRow.appendChild(batchInput);
+    inner.appendChild(batchRow);
+
+    const { row: delayRow, input: delayInput } =
+      createDelaySettingRow("tab-delay-input");
+    inner.appendChild(delayRow);
+    delayRow.querySelector("label").textContent = "Tab Delay (ms)";
+
+    // Save Settings Button
+    const saveBtn = document.createElement("button");
+    saveBtn.className = "stock-btn";
+    saveBtn.textContent = "Save Settings";
+    saveBtn.addEventListener("click", () => {
+      const newBatchSize = parseInt(batchInput.value);
+      const newTabDelay = parseInt(delayInput.value);
+      if (
+        newBatchSize > 0 &&
+        newBatchSize <= 50 &&
+        newTabDelay >= 0 &&
+        newTabDelay <= 2000
+      ) {
+        GM_setValue("batchSize", newBatchSize);
+        GM_setValue("tabDelay", newTabDelay);
+        BATCH_SIZE = newBatchSize;
+        TAB_DELAY = newTabDelay;
+        showToast("Settings Saved!");
+      } else {
+        showToast("Invalid values.");
+      }
+    });
+    inner.appendChild(saveBtn);
+
+    return inner;
+  }
+  function panelAnalysisTools() {
+    const inner = document.createElement("div");
+    inner.className = "stock-panel-inner";
+
+    const currentTicker = extractTickerFromURL();
+    const status = document.createElement("div");
+    status.className = "stock-info-label";
+    status.textContent = currentTicker
+      ? `Ticker detected: ${currentTicker}`
+      : "No ticker detected in current URL";
+    inner.appendChild(status);
+
+    const buttonLabels = [
+      {
+        label: "Open Option Chain",
+        action: () => currentTicker && openOptionChain(currentTicker),
+      },
+      {
+        label: "Open Live Options Chart",
+        action: () => currentTicker && openLiveOptionsChart(currentTicker),
+      },
+      {
+        label: "Open Spot Chart",
+        action: () => currentTicker && openSpotChart(currentTicker, true),
+      },
+    ];
+
+    buttonLabels.forEach(({ label, action }) => {
+      const btn = document.createElement("button");
+      btn.className = "stock-btn";
+      btn.textContent = label;
+      btn.disabled = !currentTicker;
+      btn.addEventListener("click", () => {
+        action(true);
+      });
+      inner.appendChild(btn);
+    });
+
+    return inner;
+  }
+
+  // ================ SAVED URLS TOOLS TAB PANEL ================
+  function panelSavedUrlsTools() {
+    const inner = document.createElement("div");
+    inner.className = "stock-panel-inner";
+
+    // Horizontal button container
+    const buttonContainer = document.createElement("div");
+    buttonContainer.className = "urls-button-container";
+
+    // Save current ticker button
+    const saveThisTickerBtn = document.createElement("button");
+    saveThisTickerBtn.className = "stock-btn urls-action-btn";
+    saveThisTickerBtn.textContent = "Save This Ticker";
+    saveThisTickerBtn.addEventListener("click", () => {
+      const ticker = extractTickerFromURL();
+      if (!ticker) {
+        showToast("No ticker detected");
+        return;
+      }
+      SAVED_TICKERS = GM_getValue("savedTickers", []);
+      if (SAVED_TICKERS.includes(ticker)) {
+        showToast("Ticker already saved");
+        return;
+      }
+      SAVED_TICKERS.push(ticker);
+      GM_setValue("savedTickers", SAVED_TICKERS);
+      showToast("Ticker saved!");
+      updateTickerList();
+    });
+    buttonContainer.appendChild(saveThisTickerBtn);
+
+    const openBatchTickerBtn = document.createElement("button");
+    openBatchTickerBtn.className = "stock-btn batch urls-action-btn";
+    openBatchTickerBtn.textContent = "Open All Live Charts";
+    openBatchTickerBtn.addEventListener("click", () => {
+      SAVED_TICKERS = GM_getValue("savedTickers", []);
+      batchOpenTickers(SAVED_TICKERS, openTickerSpotChart, "spot charts");
+    });
+    buttonContainer.appendChild(openBatchTickerBtn);
+
+    inner.appendChild(buttonContainer);
+
+    inner.appendChild(divider());
+
+    const listHeader = document.createElement("div");
+    listHeader.className = "urls-list-label";
+    listHeader.textContent = "Saved Tickers: ";
+
+    const tickerCountSpan = document.createElement("span");
+    tickerCountSpan.style.fontWeight = "bold";
+    tickerCountSpan.style.marginLeft = "3px";
+    listHeader.appendChild(tickerCountSpan);
+
+    const clearBtn = document.createElement("button");
+    clearBtn.className = "urls-clear-btn";
+    clearBtn.textContent = "Clear";
+    clearBtn.addEventListener("click", () => {
+      GM_setValue("savedTickers", []);
+      SAVED_TICKERS = [];
+      showToast("Saved tickers cleared");
+      updateTickerList();
+    });
+    listHeader.appendChild(clearBtn);
+
+    inner.appendChild(listHeader);
+
+    const tickerList = document.createElement("ul");
+    tickerList.className = "urls-list";
+    inner.appendChild(tickerList);
+
+    inner.appendChild(buildImportExportCard());
+
+    function actionButton(label, handler) {
+      const btn = document.createElement("button");
+      btn.className = "urls-action-btn ticker-action-btn";
+      btn.textContent = label;
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        handler();
+      });
+      return btn;
+    }
+
+    function buildImportExportCard() {
+      const card = document.createElement("div");
+      card.className = "urls-import-card";
+
+      const toggleBtn = document.createElement("button");
+      toggleBtn.className = "stock-btn urls-import-toggle";
+      toggleBtn.textContent = "Show Import / Export";
+
+      const section = document.createElement("div");
+      section.className = "urls-import-section";
+
+      const importTitle = document.createElement("span");
+      importTitle.className = "urls-list-title";
+      importTitle.textContent = "Import / Export";
+      section.appendChild(importTitle);
+
+      const helper = document.createElement("div");
+      helper.className = "urls-import-helper";
+      helper.textContent =
+        "Paste JSON array or comma/newline separated tickers. Export copies current list to clipboard.";
+      section.appendChild(helper);
+
+      const textArea = document.createElement("textarea");
+      textArea.className = "urls-import-text";
+      textArea.placeholder = 'TATASTEEL, SBIN, INFY or ["TATASTEEL","SBIN"]';
+      section.appendChild(textArea);
+
+      const importActions = document.createElement("div");
+      importActions.className = "urls-import-actions";
+
+      const importBtn = document.createElement("button");
+      importBtn.className = "stock-btn urls-import-btn";
+      importBtn.textContent = "Import";
+      importBtn.addEventListener("click", () => {
+        const parsed = parseTickerInput(textArea.value);
+        if (!parsed.length) {
+          showToast("No valid tickers to import");
+          return;
+        }
+        const current = new Set(GM_getValue("savedTickers", []));
+        parsed.forEach((ticker) => current.add(ticker));
+        SAVED_TICKERS = Array.from(current);
+        GM_setValue("savedTickers", SAVED_TICKERS);
+        showToast(`Imported ${parsed.length} tickers`);
+        updateTickerList();
+        textArea.value = "";
+      });
+      importActions.appendChild(importBtn);
+
+      const exportBtn = document.createElement("button");
+      exportBtn.className = "stock-btn urls-import-btn";
+      exportBtn.textContent = "Export";
+      exportBtn.addEventListener("click", async () => {
+        SAVED_TICKERS = GM_getValue("savedTickers", []);
+        if (!SAVED_TICKERS.length) {
+          showToast("No tickers to export");
+          return;
+        }
+        try {
+          await copyTextToClipboard(JSON.stringify(SAVED_TICKERS, null, 2));
+          showToast("Tickers copied to clipboard");
+        } catch (error) {
+          console.error("Clipboard copy failed", error);
+          showToast("Clipboard not available");
+        }
+      });
+      importActions.appendChild(exportBtn);
+
+      toggleBtn.addEventListener("click", () => {
+        const isVisible = section.classList.toggle("visible");
+        toggleBtn.textContent = isVisible
+          ? "Hide Import / Export"
+          : "Show Import / Export";
+      });
+
+      section.appendChild(importActions);
+      card.appendChild(toggleBtn);
+      card.appendChild(section);
+
+      return card;
+    }
+
+    function updateTickerList() {
+      tickerList.innerHTML = "";
+      SAVED_TICKERS = GM_getValue("savedTickers", []);
+      tickerCountSpan.textContent = `(${SAVED_TICKERS.length})`;
+      SAVED_TICKERS.forEach((ticker, index) => {
+        const li = document.createElement("li");
+        li.classList.add("ticker-row");
+
+        const meta = document.createElement("div");
+        meta.className = "ticker-meta";
+
+        const countBadge = document.createElement("span");
+        countBadge.className = "ticker-index";
+        countBadge.textContent = index + 1;
+
+        const label = document.createElement("span");
+        label.className = "url-text ticker-symbol";
+        label.textContent = ticker;
+
+        meta.appendChild(countBadge);
+        meta.appendChild(label);
+        li.appendChild(meta);
+
+        const actionsWrapper = document.createElement("div");
+        actionsWrapper.className = "ticker-actions";
+        actionsWrapper.appendChild(
+          actionButton("Option Chain", () => openTickerOptionChain(ticker)),
+        );
+        actionsWrapper.appendChild(
+          actionButton("Live Options", () => openTickerLiveOptions(ticker)),
+        );
+        actionsWrapper.appendChild(
+          actionButton("Spot Chart", () => openTickerSpotChart(ticker)),
+        );
+
+        const removeBtn = document.createElement("button");
+        removeBtn.className = "url-remove-btn";
+        removeBtn.textContent = "×";
+        removeBtn.title = `Remove ${ticker}`;
+        removeBtn.addEventListener("click", (e) => {
+          e.stopPropagation();
+          removeTicker(index);
+        });
+
+        li.appendChild(actionsWrapper);
+        li.appendChild(removeBtn);
+        tickerList.appendChild(li);
+      });
+
+      const existingCard = inner.querySelector(".urls-import-card");
+      if (!existingCard) {
+        const card = buildImportExportCard();
+        inner.appendChild(card);
+      } else if (!existingCard.isConnected) {
+        inner.appendChild(existingCard);
+      }
+    }
+
+    function removeTicker(index) {
+      SAVED_TICKERS.splice(index, 1);
+      GM_setValue("savedTickers", SAVED_TICKERS);
+      updateTickerList();
+      showToast("Ticker removed");
+    }
+    updateTickerList();
+
+    return inner;
+  }
+
+  // ================ TAB BAR + PANEL INIT ================
+  function createTabs() {
+    const tabBar = document.createElement("div");
+    tabBar.id = "stock-tab-bar";
+
+    const chartsTab = document.createElement("button");
+    chartsTab.textContent = "Charts Tools";
+    chartsTab.className = "stock-tab-btn active";
+
+    const urlsTab = document.createElement("button");
+    urlsTab.textContent = "Saved Tickers";
+    urlsTab.className = "stock-tab-btn";
+
+    const analysisTab = document.createElement("button");
+    analysisTab.textContent = "Analysis";
+    analysisTab.className = "stock-tab-btn";
+
+    tabBar.appendChild(chartsTab);
+    tabBar.appendChild(urlsTab);
+    tabBar.appendChild(analysisTab);
+
+    const scrollPanel = document.createElement("div");
+    scrollPanel.className = "stock-panel-scroll";
+
+    const switchTab = (index, persist = true) => {
+      chartsTab.classList.toggle("active", index === 0);
+      urlsTab.classList.toggle("active", index === 1);
+      analysisTab.classList.toggle("active", index === 2);
+      scrollPanel.innerHTML = "";
+      LAST_TAB_INDEX = index;
+      if (persist) GM_setValue("lastTabIndex", index);
+      if (index === 0) {
+        scrollPanel.appendChild(panelChartsTools());
+      } else if (index === 1) {
+        scrollPanel.appendChild(panelSavedUrlsTools());
+      } else {
+        scrollPanel.appendChild(panelAnalysisTools());
+      }
+    };
+    chartsTab.addEventListener("click", () => switchTab(0));
+    urlsTab.addEventListener("click", () => switchTab(1));
+    analysisTab.addEventListener("click", () => switchTab(2));
+
+    return { tabBar, scrollPanel, switchTab };
+  }
+
+  // Main UI setup
+  function createUI() {
+    const styleSheet = document.createElement("style");
+    styleSheet.textContent = styles;
+    document.head.appendChild(styleSheet);
+
+    const widget = document.createElement("div");
+    widget.id = "stock-ticker-widget";
+
+    const toggleBtn = document.createElement("button");
+    toggleBtn.id = "stock-toggle-btn";
+    toggleBtn.innerHTML = "📊";
+    toggleBtn.title = "Stock Ticker Tools";
+
+    const mainOuterPanel = document.createElement("div");
+    mainOuterPanel.id = "stock-main-panel";
+
+    const { tabBar, scrollPanel, switchTab } = createTabs();
+    mainOuterPanel.appendChild(tabBar);
+    mainOuterPanel.appendChild(scrollPanel);
+
+    switchTab(LAST_TAB_INDEX, false);
+
+    if (PANEL_VISIBLE) {
+      mainOuterPanel.classList.add("visible");
+    }
+
+    const toast = document.createElement("div");
+    toast.id = "stock-toast";
+    toast.textContent = "";
+    document.body.appendChild(toast);
+
+    toggleBtn.addEventListener("click", () => {
+      const isVisible = mainOuterPanel.classList.toggle("visible");
+      PANEL_VISIBLE = isVisible;
+      GM_setValue("panelVisible", isVisible);
+    });
+    widget.addEventListener("click", (e) => e.stopPropagation());
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        mainOuterPanel.classList.remove("visible");
+        PANEL_VISIBLE = false;
+        GM_setValue("panelVisible", false);
+      }
+    });
+    document.addEventListener("click", (e) => {
+      if (!widget.contains(e.target)) {
+        mainOuterPanel.classList.remove("visible");
+        PANEL_VISIBLE = false;
+        GM_setValue("panelVisible", false);
+      }
+    });
+
+    widget.appendChild(toggleBtn);
+    widget.appendChild(mainOuterPanel);
+    document.body.appendChild(widget);
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", createUI);
+  } else {
+    createUI();
+  }
 })();
