@@ -13,15 +13,27 @@ The collection currently starts with a comprehensive script for the Sensibull tr
 - Features include batch chart opening, saved tickers, quick chart tools, import/export functionality, and customizable settings
 - Version 2.8 with responsive design and dark mode support
 
+**2. Floating Bookmark Manager (bookmarks-manager.js)**
+- A floating bookmark manager that appears only when clicking in an activation zone
+- Version 4.2 with modal interface, bookmark editing, sorting by clicks, and import/export functionality
+- Uses TamperMonkey's GM_* APIs for storage
+
+**3. ChatGPT Summarize Popup Enhancer (chatgpt-summarize.js)**
+- Increases popup readability without changing its on-screen dimensions
+- Version 1.4 that works when an iframe is present in page DOM
+- Applies scaling and positioning for better readability across different screen sizes
+
 ## Technical Architecture
 
 ### Technology Stack
 - **Language:** Plain JavaScript for TamperMonkey userscript
-- **APIs:** TamperMonkey's GM_* APIs (GM_openInTab, GM_setValue, GM_getValue)
+- **APIs:** TamperMonkey's GM_* APIs (GM_openInTab, GM_setValue, GM_getValue, etc.)
 - **Compatibility:** Modern browsers (Chrome, Firefox, Edge, Safari)
 
 ### File Structure
-- `sensibull.js`: Main TamperMonkey script file with comprehensive functionality
+- `sensibull.js`: Main TamperMonkey script file with comprehensive functionality for trading platform
+- `bookmarks-manager.js`: Bookmark management script with floating UI
+- `chatgpt-summarize.js`: Enhancement script for ChatGPT popup readability
 - `README.md`: Documentation for the script collection with installation and usage instructions
 - `PLAN.md`: Project goals, implementation plan and coding guidelines
 - `LICENSE`: MIT License for code distribution
@@ -90,11 +102,12 @@ To add a new TamperMonkey script to this collection:
 3. Add a section to the README describing the new script
 4. Include installation and usage instructions specific to the new script
 
-## Current Script Details (sensibull.js)
+## Current Script Details
 
+### sensibull.js
 The sensibull.js script is a comprehensive enhancement for the Sensibull trading platform with the following capabilities:
 
-### Features
+#### Features
 - **Batch Chart Opening**: Open charts for Nifty 50 stocks in configurable batches with customizable delays
 - **Saved Tickers**: Save current tickers and access them later with one-click chart opening
 - **Quick Chart Tools**: One-click access to different chart types for current ticker
@@ -102,12 +115,33 @@ The sensibull.js script is a comprehensive enhancement for the Sensibull trading
 - **Customizable Settings**: Adjust batch size and tab opening delay to suit your needs
 - **Responsive Design**: Works well on different screen sizes with dark mode support
 
-### Supported URLs
+#### Supported URLs
 - `https://web.sensibull.com/*`
 
-### Permissions Required
+#### Permissions Required
 - `GM_openInTab`: To open new tabs for stock charts
 - `GM_setValue` / `GM_getValue`: To save and retrieve user preferences and saved tickers
+
+### bookmarks-manager.js
+A floating bookmark manager with these features:
+- Appears only when clicking in an activation zone at top center of screen
+- Modal interface for managing bookmarks
+- Bookmark editing, sorting by clicks, and import/export functionality
+- Responsive design that works across different screen sizes
+
+#### Permissions Required
+- `GM_getValue` / `GM_setValue`: For storing bookmarks
+- `GM_listValues` / `GM_deleteValue`: For advanced bookmark management
+
+### chatgpt-summarize.js
+An enhancement script that improves readability of ChatGPT summary popups:
+- Increases text size without changing popup dimensions
+- Responsive behavior based on window size
+- Automatic detection and enhancement of popup iframes
+- Preserves original popup position while improving readability
+
+#### Permissions Required
+- No special permissions needed (@grant: none)
 
 ## License
 
