@@ -20,7 +20,6 @@
     "https://web.sensibull.com/chart?tradingSymbol={TICKER}";
   const OPTION_CHAIN_URL_TEMPLATE =
     "https://web.sensibull.com/option-chain?tradingsymbol={TICKER}";
-  const ANALYSIS_TABS = ["Charts Tools", "Saved Tickers", "Analysis"];
   const STOCK_TICKERS = [
     "ADANIPORTS",
     "ASIANPAINT",
@@ -473,15 +472,6 @@
             color:#fff;
             opacity:1;
         }
-        .url-tooltip {
-            position:relative;
-            display:inline-block;
-            cursor:help;
-            max-width: 100%;
-            overflow: hidden;
-        }
-
-
         @media (max-width: 600px) {
             #stock-main-panel {
                 width:95vw !important;
