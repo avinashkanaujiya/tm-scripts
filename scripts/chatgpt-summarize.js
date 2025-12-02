@@ -6,6 +6,7 @@
 // @match        *://*/*
 // @grant        none
 // @run-at       document-idle
+// @require      file:///Users/avinashkanaujiya/Projects/tm-scripts/scripts/chatgpt-summarize.js
 // ==/UserScript==
 
 (function () {

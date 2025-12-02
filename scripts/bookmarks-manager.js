@@ -10,6 +10,7 @@
 // @grant        GM_listValues
 // @grant        GM_deleteValue
 // @run-at       document-end
+// @require      file:///Users/avinashkanaujiya/Projects/tm-scripts/scripts/bookmarks-manager.js
 // ==/UserScript==
 
 (function () {
