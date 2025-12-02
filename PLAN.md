@@ -1,6 +1,6 @@
 # Goal of this project
 
-Create a powerful and user-friendly TamperMonkey script that enhances the Sensibull trading platform with features like batch opening of stock charts, saved tickers, sticky tabs, and other productivity tools for traders.
+Create a collection of powerful and user-friendly TamperMonkey scripts for various websites and tools used in day-to-day activities, starting with a script that enhances the Sensibull trading platform with features like batch opening of stock charts, saved tickers, sticky tabs, and other productivity tools for traders.
 
 ## Coding Guidelines
 - Focus on clean, readable JavaScript code suitable for browser environments.

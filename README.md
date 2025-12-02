@@ -1,9 +1,14 @@
-# Sensibull Stock Ticker Tools
+# Collection of TamperMonkey Scripts
+
+A collection of powerful TamperMonkey scripts for various websites and tools used in day-to-day activities to boost productivity and enhance user experience.
+
+## Scripts in this Collection
+
+### 1. Sensibull Stock Ticker Tools (sensibull.js)
 
 A powerful TamperMonkey script that enhances the Sensibull trading platform with productivity tools for traders.
 
-## Features
-
+#### Features
 - **Batch Chart Opening**: Open charts for Nifty 50 stocks in configurable batches with customizable delays
 - **Saved Tickers**: Save current tickers and access them later with one-click chart opening
 - **Quick Chart Tools**: One-click access to different chart types for current ticker
@@ -11,8 +16,7 @@ A powerful TamperMonkey script that enhances the Sensibull trading platform with
 - **Customizable Settings**: Adjust batch size and tab opening delay to suit your needs
 - **Responsive Design**: Works well on different screen sizes with dark mode support
 
-## Installation
-
+#### Installation
 1. Install the [TamperMonkey browser extension](https://www.tampermonkey.net/) for your browser (Chrome, Firefox, Edge, etc.)
 2. Click on the sensibull.js file in this repository
 3. Copy the entire content of the file
@@ -21,14 +25,13 @@ A powerful TamperMonkey script that enhances the Sensibull trading platform with
 6. Save the script (Ctrl+S)
 7. Navigate to [https://web.sensibull.com/](https://web.sensibull.com/) to start using the tools
 
-## Usage
-
-### Main Panel
+#### Usage
+##### Main Panel
 - Look for the 📊 button in the bottom-left corner of Sensibull pages
 - Click it to open the main tools panel
 - Press `Escape` or click outside the panel to close it
 
-### Tabs
+##### Tabs
 1. **Charts Tools**:
    - Shows a list of Nifty 50 stocks in configurable batches
    - Open charts for current ticker if detected in URL
@@ -47,29 +50,38 @@ A powerful TamperMonkey script that enhances the Sensibull trading platform with
    - Open Option Chain, Live Options Chart, or Spot Chart
    - Only active when a ticker is detected in the current URL
 
-### Settings
+##### Settings
 - Batch Size: Number of tabs to open in each batch (1-50)
 - Tab Delay: Time delay in milliseconds between opening tabs (0-2000ms)
 - Settings are saved automatically using TamperMonkey's storage API
 
-## Supported URLs
+#### Supported URLs
 The script is designed to work on all Sensibull pages:
 - `https://web.sensibull.com/*`
+
+## Adding New Scripts
+
+To add a new TamperMonkey script to this collection:
+1. Create a new .js file with a descriptive name
+2. Follow TamperMonkey script standards with proper @match, @grant, etc.
+3. Add a section to this README describing the new script
+4. Include installation and usage instructions specific to the new script
 
 ## Requirements
 - TamperMonkey browser extension
 - Modern web browser (Chrome, Firefox, Edge, Safari)
 
 ## Permissions
-This script requests the following permissions:
+Each script in this collection requests specific permissions as needed. For sensibull.js:
 - `GM_openInTab`: To open new tabs for stock charts
 - `GM_setValue` / `GM_getValue`: To save and retrieve user preferences and saved tickers
 
 ## Contributing
 1. Fork the repository
-2. Make your changes to the sensibull.js file
+2. Add your new script or modify an existing one
 3. Test the script in your TamperMonkey environment
-4. Submit a pull request with your changes
+4. Update the README with documentation for your changes
+5. Submit a pull request with your changes
 
 ## License
 This project is licensed under the terms specified in the LICENSE file.
