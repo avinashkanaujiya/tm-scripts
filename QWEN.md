@@ -8,17 +8,17 @@ The collection currently starts with a comprehensive script for the Sensibull tr
 
 ### Current Scripts
 
-**1. Sensibull Stock Ticker Tools (sensibull.js)**
+**1. Sensibull Stock Ticker Tools (scripts/sensibull.js)**
 - A powerful TamperMonkey script that enhances the Sensibull trading platform with productivity tools for traders
 - Features include batch chart opening, saved tickers, quick chart tools, import/export functionality, and customizable settings
 - Version 2.8 with responsive design and dark mode support
 
-**2. Floating Bookmark Manager (bookmarks-manager.js)**
+**2. Floating Bookmark Manager (scripts/bookmarks-manager.js)**
 - A floating bookmark manager that appears only when clicking in an activation zone
 - Version 4.2 with modal interface, bookmark editing, sorting by clicks, and import/export functionality
 - Uses TamperMonkey's GM_* APIs for storage
 
-**3. ChatGPT Summarize Popup Enhancer (chatgpt-summarize.js)**
+**3. ChatGPT Summarize Popup Enhancer (scripts/chatgpt-summarize.js)**
 - Increases popup readability without changing its on-screen dimensions
 - Version 1.4 that works when an iframe is present in page DOM
 - Applies scaling and positioning for better readability across different screen sizes
@@ -31,9 +31,9 @@ The collection currently starts with a comprehensive script for the Sensibull tr
 - **Compatibility:** Modern browsers (Chrome, Firefox, Edge, Safari)
 
 ### File Structure
-- `sensibull.js`: Main TamperMonkey script file with comprehensive functionality for trading platform
-- `bookmarks-manager.js`: Bookmark management script with floating UI
-- `chatgpt-summarize.js`: Enhancement script for ChatGPT popup readability
+- `scripts/sensibull.js`: Main TamperMonkey script file with comprehensive functionality for trading platform
+- `scripts/bookmarks-manager.js`: Bookmark management script with floating UI
+- `scripts/chatgpt-summarize.js`: Enhancement script for ChatGPT popup readability
 - `README.md`: Documentation for the script collection with installation and usage instructions
 - `PLAN.md`: Project goals, implementation plan and coding guidelines
 - `LICENSE`: MIT License for code distribution
@@ -87,7 +87,7 @@ The collection currently starts with a comprehensive script for the Sensibull tr
 
 To use any script in this collection:
 1. Install the [TamperMonkey browser extension](https://www.tampermonkey.net/)
-2. Navigate to the specific .js file in this repository
+2. Navigate to the specific .js file in the `scripts` directory of this repository
 3. Copy the entire content of the file
 4. In TamperMonkey, click on "Add a new script"
 5. Replace the default content with the copied code
@@ -97,7 +97,7 @@ To use any script in this collection:
 ### Adding New Scripts
 
 To add a new TamperMonkey script to this collection:
-1. Create a new .js file with a descriptive name
+1. Create a new .js file with a descriptive name in the `scripts` directory
 2. Follow TamperMonkey script standards with proper @match, @grant, etc.
 3. Add a section to the README describing the new script
 4. Include installation and usage instructions specific to the new script
