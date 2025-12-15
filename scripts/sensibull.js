@@ -506,19 +506,22 @@
     }
   }
   function openOptionChain(ticker, active = true) {
-    openUrl(OPTION_CHAIN_URL_TEMPLATE.replace("{TICKER}", ticker), {
+    const encodedTicker = encodeTicker(ticker);
+    openUrl(OPTION_CHAIN_URL_TEMPLATE.replace("{TICKER}", encodedTicker), {
       active,
       insert: true,
     });
   }
   function openLiveOptionsChart(ticker, active = true) {
-    openUrl(LIVE_OPTIONS_CHARTS_URL_TEMPLATE.replace("{TICKER}", ticker), {
+    const encodedTicker = encodeTicker(ticker);
+    openUrl(LIVE_OPTIONS_CHARTS_URL_TEMPLATE.replace("{TICKER}", encodedTicker), {
       active,
       insert: true,
     });
   }
   function openSpotChart(ticker, active = true) {
-    openUrl(LIVE_SPOT_CHARTS_URL_TEMPLATE.replace("{TICKER}", ticker), {
+    const encodedTicker = encodeTicker(ticker);
+    openUrl(LIVE_SPOT_CHARTS_URL_TEMPLATE.replace("{TICKER}", encodedTicker), {
       active,
       insert: true,
     });
@@ -531,6 +534,11 @@
     if (!ticker) return;
     openLiveOptionsChart(ticker, active);
   }
+  function encodeTicker(ticker) {
+    // Replace ampersand with %26 to handle special characters in URLs
+    return ticker ? ticker.replace(/&/g, '%26') : ticker;
+  }
+
   function openTickerSpotChart(ticker, active = true) {
     if (!ticker) return;
     openSpotChart(ticker, active);
@@ -634,7 +642,8 @@
   function openBatch(tickers, batchInfo) {
     showToast(`Opening batch: ${batchInfo} (${tickers.length} tabs)`);
     tickers.forEach((ticker, index) => {
-      const url = LIVE_OPTIONS_CHARTS_URL_TEMPLATE.replace("{TICKER}", ticker);
+      const encodedTicker = encodeTicker(ticker);
+      const url = LIVE_OPTIONS_CHARTS_URL_TEMPLATE.replace("{TICKER}", encodedTicker);
       setTimeout(() => {
         if (typeof GM_openInTab !== "undefined") {
           GM_openInTab(url, { active: false, insert: true });
@@ -651,7 +660,7 @@
     }
 
     tickers.forEach((ticker, idx) => {
-      setTimeout(() => opener(ticker), idx * TAB_DELAY);
+      setTimeout(() => opener(encodeTicker(ticker)), idx * TAB_DELAY);
     });
     showToast(`Opening ${tickers.length} ${label}`);
   }
