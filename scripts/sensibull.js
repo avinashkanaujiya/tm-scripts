@@ -112,8 +112,13 @@
             overflow: hidden;
             position: relative;
             box-sizing: border-box;
+            opacity: 0.03;
+            transition: opacity 0.3s ease;
         }
         #stock-main-panel.visible {display:flex;}
+        #stock-main-panel:hover {
+            opacity: 1.0;
+        }
         #stock-tab-bar {
             display:flex;
             width:100%;
