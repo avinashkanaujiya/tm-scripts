@@ -675,6 +675,19 @@
     });
     inner.appendChild(currentTickerBtn);
 
+    // Add open option chain button below the current ticker button
+    const optionChainBtn = document.createElement("button");
+    optionChainBtn.className = "stock-current-ticker";
+    optionChainBtn.innerHTML = currentTicker
+      ? `<span>Open Option Chain For ${currentTicker}</span><span>📊</span>`
+      : `<span>No ticker detected in URL</span><span>⚠️</span>`;
+    optionChainBtn.disabled = !currentTicker;
+    optionChainBtn.addEventListener("click", () => {
+      if (!currentTicker) return;
+      openTickerOptionChain(currentTicker);
+    });
+    inner.appendChild(optionChainBtn);
+
     inner.appendChild(divider());
 
     // Display sector-wise buttons - one button per sector to open all stocks
