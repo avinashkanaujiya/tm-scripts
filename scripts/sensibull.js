@@ -22,58 +22,22 @@
   const OPTION_CHAIN_URL_TEMPLATE =
     "https://web.sensibull.com/option-chain?tradingsymbol={TICKER}";
 
-  const STOCK_TICKERS = [
-    "HDFCBANK",
-    "RELIANCE",
-    "ICICIBANK",
-    "BHARTIARTL",
-    "INFY",
-    "LT",
-    "SBIN",
-    "AXISBANK",
-    "ITC",
-    "M&M",
-    "TCS",
-    "KOTAKBANK",
-    "BAJFINANCE",
-    "HINDUNILVR",
-    "MARUTI",
-    "SUNPHARMA",
-    "ETERNAL",
-    "HCLTECH",
-    "NTPC",
-    "BEL",
-    "TITAN",
-    "TATASTEEL",
-    "ASIANPAINT",
-    "ULTRACEMCO",
-    "INDIGO",
-    "POWERGRID",
-    "BAJAJFINSV",
-    "HINDALCO",
-    "ADANIPORTS",
-    "SHRIRAMFIN",
-    "BAJAJ-AUTO",
-    "JSWSTEEL",
-    "JIOFIN",
-    "TECHM",
-    "EICHERMOT",
-    "ONGC",
-    "NESTLEIND",
-    "COALINDIA",
-    "TRENT",
-    "CIPLA",
-    "SBILIFE",
-    "GRASIM",
-    "MAXHEALTH",
-    "TATACONSUM",
-    "DRREDDY",
-    "APOLLOHOSP",
-    "TMPV",
-    "HDFCLIFE",
-    "WIPRO",
-    "ADANIENT",
-  ];
+  const SECTOR_STOCKS = {
+    "Banking & Financial Services": ["HDFCBANK", "ICICIBANK"],
+    "Information Technology": ["INFY", "TCS"],
+    "Automobile & Auto Ancillary": ["MARUTI", "TCS"],
+    "Oil & Gas": ["RELIANCE", "ONGC"],
+    "Metals & Mining": ["TATASTEEL", "JSWSTEEL"],
+    FMCG: ["HINDUNILVR", "ITC"],
+    Pharmaceuticals: ["CIPLA", "DRREDDY"],
+    "Power & Energy": ["NTPC", "POWERGRID"],
+    "Construction Materials": ["ULTRACEMCO", "GRASIM"],
+    Telecommunications: ["BHARTIARTL", "IDEA"],
+    Chemicals: ["PIDILITE", "ATUL"],
+    Infrastructure: ["LT", "JINDALSAW"],
+    "Media & Entertainment": ["DISHTV", "GVF"],
+    "Aviation & Logistics": ["INDIGO", "AIRTEL"],
+  };
 
   const VALID_TICKER_PATTERN = /^[A-Z0-9&-]+$/;
 
@@ -82,6 +46,9 @@
   let SAVED_TICKERS = GM_getValue("savedTickers", []);
   let LAST_TAB_INDEX = GM_getValue("lastTabIndex", 0);
   let PANEL_VISIBLE = GM_getValue("panelVisible", false);
+
+  // Extract all tickers from all sectors for backward compatibility or global operations
+  const ALL_SECTOR_TICKERS = Object.values(SECTOR_STOCKS).flat();
 
   // ================ STYLES ================
   const styles = `
@@ -664,8 +631,8 @@
     showToast(`Opening chart for ${ticker}`);
     openSpotChart(ticker, true);
   }
-  function openBatch(tickers, batchNum) {
-    showToast(`Batch ${batchNum}: Opening ${tickers.length} tabs`);
+  function openBatch(tickers, batchInfo) {
+    showToast(`Opening batch: ${batchInfo} (${tickers.length} tabs)`);
     tickers.forEach((ticker, index) => {
       const url = LIVE_OPTIONS_CHARTS_URL_TEMPLATE.replace("{TICKER}", ticker);
       setTimeout(() => {
@@ -710,43 +677,25 @@
 
     inner.appendChild(divider());
 
-    inner.appendChild(
-      labelSpan(
-        `Nifty ${STOCK_TICKERS.length} tickers • ${Math.ceil(STOCK_TICKERS.length / BATCH_SIZE)} batches of ${BATCH_SIZE}`,
-      ),
-    );
-    for (let i = 0; i < STOCK_TICKERS.length; i += BATCH_SIZE) {
-      const batchNum = Math.floor(i / BATCH_SIZE) + 1,
-        tickersInBatch = STOCK_TICKERS.slice(
-          i,
-          Math.min(i + BATCH_SIZE, STOCK_TICKERS.length),
-        );
+    // Display sector-wise buttons - one button per sector to open all stocks
+    for (const [sectorName, sectorTickers] of Object.entries(SECTOR_STOCKS)) {
+      const totalTickers = sectorTickers.length;
+
+      inner.appendChild(
+        labelSpan(`${sectorName} • ${totalTickers} tickers`)
+      );
+
       const btn = document.createElement("button");
       btn.className = "stock-batch-btn";
-      btn.innerHTML = `<span style="flex-shrink:0;">Batch ${batchNum}: ${tickersInBatch[0]} - ${tickersInBatch[tickersInBatch.length - 1]}</span><span class="badge">${tickersInBatch.length}</span>`;
-      btn.addEventListener("click", () => openBatch(tickersInBatch, batchNum));
+      btn.innerHTML = `<span style="flex-shrink:0;">Open All Stocks</span><span class="badge">${totalTickers}</span>`;
+      btn.addEventListener("click", () => openBatch(sectorTickers, `${sectorName} (${totalTickers} stocks)`));
       inner.appendChild(btn);
-    }
 
-    inner.appendChild(divider());
+      inner.appendChild(divider());
+    }
 
     // Integrated Settings Section
     inner.appendChild(labelSpan("Settings"));
-
-    // Batch Size Configuration
-    const batchRow = document.createElement("div");
-    batchRow.className = "stock-config-row";
-    const batchLabel = document.createElement("label");
-    batchLabel.textContent = "Batch Size";
-    const batchInput = document.createElement("input");
-    batchInput.type = "number";
-    batchInput.value = BATCH_SIZE;
-    batchInput.min = "1";
-    batchInput.max = "50";
-    batchInput.id = "batch-size-input-charts";
-    batchRow.appendChild(batchLabel);
-    batchRow.appendChild(batchInput);
-    inner.appendChild(batchRow);
 
     const { row: delayRow, input: delayInput } =
       createDelaySettingRow("tab-delay-input");
@@ -758,17 +707,9 @@
     saveBtn.className = "stock-btn";
     saveBtn.textContent = "Save Settings";
     saveBtn.addEventListener("click", () => {
-      const newBatchSize = parseInt(batchInput.value);
       const newTabDelay = parseInt(delayInput.value);
-      if (
-        newBatchSize > 0 &&
-        newBatchSize <= 50 &&
-        newTabDelay >= 0 &&
-        newTabDelay <= 2000
-      ) {
-        GM_setValue("batchSize", newBatchSize);
+      if (newTabDelay >= 0 && newTabDelay <= 2000) {
         GM_setValue("tabDelay", newTabDelay);
-        BATCH_SIZE = newBatchSize;
         TAB_DELAY = newTabDelay;
         showToast("Settings Saved!");
       } else {
