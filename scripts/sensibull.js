@@ -59,12 +59,208 @@
   };
 
   const VALID_TICKER_PATTERN = /^[A-Z0-9&-]+$/;
+  const MAX_TICKER_LENGTH = 20; // Maximum length for ticker symbols
+  const MIN_BATCH_SIZE = 1;
+  const MAX_BATCH_SIZE = 100;
+  const MIN_TAB_DELAY = 0;
+  const MAX_TAB_DELAY = 5000; // Maximum delay in milliseconds
 
-  let BATCH_SIZE = GM_getValue("batchSize", 10);
-  let TAB_DELAY = GM_getValue("tabDelay", 200);
-  let SAVED_TICKERS = GM_getValue("savedTickers", []);
-  let LAST_TAB_INDEX = GM_getValue("lastTabIndex", 0);
-  let PANEL_VISIBLE = GM_getValue("panelVisible", false);
+  // UI Constants
+  const UI_CONSTANTS = {
+    WIDGET_BOTTOM_POSITION: '32px',
+    WIDGET_LEFT_POSITION: '32px',
+    TOGGLE_BUTTON_SIZE: '56px',
+    TOGGLE_BUTTON_BORDER_RADIUS: '50%',
+    TOGGLE_BUTTON_FONT_SIZE: '25px',
+    TOGGLE_BUTTON_FONT_WEIGHT: '700',
+    TOGGLE_BUTTON_MARGIN_BOTTOM: '8px',
+    PANEL_BORDER_RADIUS: '14px',
+    PANEL_WIDTH: '380px',
+    PANEL_HEIGHT: '560px',
+    TAB_BAR_HEIGHT: '48px',
+    SCROLL_PANEL_HEIGHT: '512px',
+    INNER_PANEL_PADDING: '20px 22px 24px 22px',
+    TAB_BUTTON_HEIGHT: '48px',
+    TAB_BUTTON_FONT_SIZE: '16px',
+    DIVIDER_HEIGHT: '1px',
+    DIVIDER_MARGIN: '18px 0 19px 0',
+    DIVIDER_BORDER_RADIUS: '2px',
+    CURRENT_TICKER_PADDING: '13px 0 13px 0',
+    CURRENT_TICKER_BORDER_RADIUS: '8px',
+    CURRENT_TICKER_FONT_SIZE: '17px',
+    CURRENT_TICKER_GAP: '8px',
+    CURRENT_TICKER_MARGIN_BOTTOM: '18px',
+    TOAST_DURATION: 2000, // milliseconds
+    BUTTON_WIDTH: '100%',
+    BUTTON_PADDING: '11px 0 11px 0',
+    BUTTON_BORDER_RADIUS: '8px',
+    BUTTON_FONT_SIZE: '16px',
+    BUTTON_FONT_WEIGHT: '600',
+    BUTTON_MARGIN_BOTTOM: '17px',
+    BATCH_BUTTON_MARGIN_BOTTOM: '13px',
+    BATCH_BUTTON_GAP: '10px',
+    BATCH_BUTTON_PADDING_LEFT: '15px',
+    BATCH_BUTTON_PADDING_RIGHT: '12px',
+    BADGE_PADDING: '2px 8px',
+    BADGE_BORDER_RADIUS: '13px',
+    BADGE_FONT_SIZE: '12px',
+    GRID_GAP: '12px',
+    ACTION_BUTTON_PADDING: '11px 8px',
+    ACTION_BUTTON_FONT_SIZE: '15px',
+    IMPORT_CARD_BORDER_RADIUS: '10px',
+    IMPORT_CARD_PADDING: '16px',
+    IMPORT_CARD_MARGIN_BOTTOM: '18px',
+    IMPORT_HELPER_FONT_SIZE: '13px',
+    IMPORT_TEXT_BORDER_RADIUS: '8px',
+    IMPORT_TEXT_PADDING: '10px 12px',
+    IMPORT_TEXT_FONT_SIZE: '14px',
+    IMPORT_ACTIONS_GAP: '10px',
+    IMPORT_ACTIONS_MARGIN_TOP: '12px',
+    IMPORT_BUTTON_FLEX: '1 1 180px',
+    IMPORT_BUTTON_PADDING: '10px 12px',
+    IMPORT_BUTTON_FONT_SIZE: '15px',
+    IMPORT_TOGGLE_MARGIN_TOP: '16px',
+    IMPORT_SECTION_MARGIN_TOP: '14px',
+    INFO_LABEL_MARGIN_BOTTOM: '23px',
+    INFO_LABEL_FONT_SIZE: '15px',
+    INFO_LABEL_FONT_WEIGHT: '500',
+    CONFIG_ROW_MARGIN_BOTTOM: '19px',
+    CONFIG_LABEL_FONT_SIZE: '13px',
+    CONFIG_LABEL_MARGIN_BOTTOM: '7px',
+    CONFIG_INPUT_WIDTH: '100%',
+    CONFIG_INPUT_PADDING: '9px 13px',
+    CONFIG_INPUT_BORDER_RADIUS: '7px',
+    CONFIG_INPUT_FONT_SIZE: '15px',
+    LIST_TITLE_FONT_SIZE: '15px',
+    LIST_TITLE_FONT_WEIGHT: '600',
+    LIST_LABEL_FONT_SIZE: '13px',
+    LIST_LABEL_FONT_WEIGHT: '500',
+    CLEAR_BUTTON_MARGIN: '0 0 0 13px',
+    CLEAR_BUTTON_FONT_SIZE: '13px',
+    LIST_MARGIN: '16px 0 0 0',
+    LIST_BORDER_RADIUS: '10px',
+    LIST_ITEM_FONT_SIZE: '13px',
+    LIST_ITEM_PADDING: '12px 14px',
+    LIST_ITEM_MIN_HEIGHT: '48px',
+    LIST_ITEM_BORDER_RADIUS: '0',
+    LIST_ITEM_LAST_BORDER_RADIUS_BOTTOM_LEFT: '10px',
+    LIST_ITEM_LAST_BORDER_RADIUS_BOTTOM_RIGHT: '10px',
+    LIST_ITEM_FIRST_BORDER_RADIUS_TOP_LEFT: '10px',
+    LIST_ITEM_FIRST_BORDER_RADIUS_TOP_RIGHT: '10px',
+    TICKER_ROW_GAP: '10px',
+    TICKER_META_GAP: '8px',
+    TICKER_META_MIN_WIDTH: '120px',
+    TICKER_INDEX_WIDTH: '26px',
+    TICKER_INDEX_HEIGHT: '26px',
+    TICKER_INDEX_BORDER_RADIUS: '7px',
+    TICKER_INDEX_FONT_SIZE: '12px',
+    TICKER_INDEX_FONT_WEIGHT: '600',
+    TICKER_SYMBOL_FONT_WEIGHT: '600',
+    TICKER_SYMBOL_FONT_SIZE: '15px',
+    TICKER_ACTIONS_GAP: '6px',
+    TICKER_ACTION_BTN_PADDING: '6px 10px',
+    TICKER_ACTION_BTN_FONT_SIZE: '13px',
+    TICKER_ACTION_BTN_BORDER_RADIUS: '6px',
+    TICKER_ACTION_BTN_MIN_HEIGHT: '32px',
+    URL_REMOVE_BTN_FONT_SIZE: '14px',
+    URL_REMOVE_BTN_MARGIN_LEFT: '8px',
+    URL_REMOVE_BTN_PADDING: '2px 6px',
+    URL_REMOVE_BTN_BORDER_RADIUS: '3px',
+    URL_REMOVE_BTN_TRANSITION: '0.13s',
+    URL_REMOVE_BTN_WIDTH: '22px',
+    URL_REMOVE_BTN_HEIGHT: '22px',
+    URL_REMOVE_BTN_MIN_WIDTH: '22px',
+    URL_REMOVE_BTN_MIN_HEIGHT: '22px',
+    TRUNCATED_TEXT_GRADIENT_WIDTH: '20px',
+    MOBILE_MAX_WIDTH: '600px',
+    MOBILE_PANEL_HEIGHT: '70vh',
+    MOBILE_PANEL_PADDING: '12px',
+    MOBILE_SCROLL_PANEL_HEIGHT: 'calc(70vh - 48px)',
+    MOBILE_GRID_GAP: '8px',
+    MOBILE_ACTION_BUTTON_FONT_SIZE: '13px',
+    MOBILE_ACTION_BUTTON_PADDING: '10px 6px',
+    MOBILE_TRUNCATED_MAX_WIDTH: 'calc(100% - 25px)',
+    MOBILE_REMOVE_BTN_WIDTH: '20px',
+    MOBILE_REMOVE_BTN_HEIGHT: '20px',
+    MOBILE_REMOVE_BTN_MIN_WIDTH: '20px',
+    MOBILE_REMOVE_BTN_MIN_HEIGHT: '20px',
+    CURRENT_TICKER_FONT_SIZE_LARGE: '18px',
+    CURRENT_TICKER_FONT_WEIGHT: 'bold',
+    CHART_BUTTON_MARGIN_BOTTOM: '12px',
+    NO_TICKER_MESSAGE_MARGIN: '15px 0',
+    NO_TICKER_MESSAGE_FONT_STYLE: 'italic'
+  };
+
+  // UI Class Names
+  const UI_CLASS_NAMES = {
+    WIDGET_ID: 'stock-ticker-widget',
+    TOGGLE_BTN_ID: 'stock-toggle-btn',
+    MAIN_PANEL_ID: 'stock-main-panel',
+    TAB_BAR_ID: 'stock-tab-bar',
+    PANEL_SCROLL_CLASS: 'stock-panel-scroll',
+    PANEL_INNER_CLASS: 'stock-panel-inner',
+    TAB_BTN_CLASS: 'stock-tab-btn',
+    CURRENT_TICKER_CLASS: 'stock-current-ticker',
+    BTN_CLASS: 'stock-btn',
+    BATCH_BTN_CLASS: 'stock-batch-btn',
+    CLEAR_BTN_CLASS: 'urls-clear-btn',
+    BATCH_BTN_BATCH_CLASS: 'stock-btn.batch',
+    DIVIDER_CLASS: 'divider',
+    INFO_LABEL_CLASS: 'stock-info-label',
+    CONFIG_ROW_CLASS: 'stock-config-row',
+    ACTIVE_TAB_CLASS: 'active',
+    VISIBLE_PANEL_CLASS: 'visible',
+    BADGE_CLASS: 'badge',
+    URLS_BUTTON_CONTAINER_CLASS: 'urls-button-container',
+    URLS_ACTION_BTN_CLASS: 'urls-action-btn',
+    URLS_IMPORT_CARD_CLASS: 'urls-import-card',
+    URLS_IMPORT_SECTION_CLASS: 'urls-import-section',
+    URLS_IMPORT_TEXT_CLASS: 'urls-import-text',
+    URLS_IMPORT_BTN_CLASS: 'urls-import-btn',
+    URLS_IMPORT_TOGGLE_CLASS: 'urls-import-toggle',
+    URLS_LIST_TITLE_CLASS: 'urls-list-title',
+    URLS_LIST_LABEL_CLASS: 'urls-list-label',
+    URLS_LIST_CLASS: 'urls-list',
+    URLS_IMPORT_ACTIONS_CLASS: 'urls-import-actions',
+    URLS_IMPORT_HELPER_CLASS: 'urls-import-helper',
+    URLS_LIST_ITEM_CLASS: 'ticker-row',
+    TICKER_META_CLASS: 'ticker-meta',
+    TICKER_INDEX_CLASS: 'ticker-index',
+    TICKER_SYMBOL_CLASS: 'ticker-symbol',
+    URL_TEXT_CONTAINER_CLASS: 'url-text-container',
+    URL_TEXT_CLASS: 'url-text',
+    URL_REMOVE_BTN_CLASS: 'url-remove-btn',
+    URL_TRUNCATED_CLASS: 'truncated',
+    TICKER_ACTIONS_CLASS: 'ticker-actions',
+    TICKER_ACTION_BTN_CLASS: 'ticker-action-btn'
+  };
+
+  // UI IDs
+  const UI_IDS = {
+    TOAST_ID: 'stock-toast',
+    TAB_DELAY_INPUT_ID: 'tab-delay-input'
+  };
+
+  let BATCH_SIZE;
+  let TAB_DELAY;
+  let SAVED_TICKERS;
+  let LAST_TAB_INDEX;
+  let PANEL_VISIBLE;
+
+  try {
+    BATCH_SIZE = Math.min(MAX_BATCH_SIZE, Math.max(MIN_BATCH_SIZE, GM_getValue("batchSize", 10)));
+    TAB_DELAY = Math.min(MAX_TAB_DELAY, Math.max(MIN_TAB_DELAY, GM_getValue("tabDelay", 200)));
+    SAVED_TICKERS = GM_getValue("savedTickers", []);
+    LAST_TAB_INDEX = GM_getValue("lastTabIndex", 0);
+    PANEL_VISIBLE = GM_getValue("panelVisible", false);
+  } catch (error) {
+    console.error("Error initializing GM values:", error);
+    BATCH_SIZE = 10;
+    TAB_DELAY = 200;
+    SAVED_TICKERS = [];
+    LAST_TAB_INDEX = 0;
+    PANEL_VISIBLE = false;
+  }
 
   // Extract all tickers from all sectors for backward compatibility or global operations
   const ALL_SECTOR_TICKERS = Object.values(SECTOR_STOCKS).flat();
@@ -511,63 +707,75 @@
     return s;
   }
   function showToast(message) {
-    const toast = document.getElementById("stock-toast");
+    const toast = document.getElementById(UI_IDS.TOAST_ID);
     if (!toast) return;
     toast.textContent = message;
     toast.style.opacity = "1";
     setTimeout(() => {
       toast.style.opacity = "0";
-    }, 2000);
+    }, UI_CONSTANTS.TOAST_DURATION);
+  }
+
+  // ================ GM API HELPERS ================
+  function isGMFunctionAvailable() {
+    return typeof GM_openInTab !== "undefined" &&
+           typeof GM_setValue !== "undefined" &&
+           typeof GM_getValue !== "undefined";
   }
 
   // ================ URL OPEN HELPERS ================
   function openUrl(url, options = { active: false, insert: true }) {
-    if (typeof GM_openInTab !== "undefined") {
-      GM_openInTab(url, { active: options.active, insert: options.insert });
+    if (isGMFunctionAvailable() && typeof GM_openInTab !== "undefined") {
+      try {
+        GM_openInTab(url, { active: options.active, insert: options.insert });
+      } catch (error) {
+        console.error("GM_openInTab failed:", error);
+        // Fallback to regular window.open if GM function fails
+        const win = window.open(url, "_blank");
+        if (options.active && win) win.focus();
+      }
     } else {
       const win = window.open(url, "_blank");
       if (options.active && win) win.focus();
     }
   }
-  function openOptionChain(ticker, active = true) {
-    const encodedTicker = encodeTicker(ticker);
-    openUrl(OPTION_CHAIN_URL_TEMPLATE.replace("{TICKER}", encodedTicker), {
-      active,
-      insert: true,
-    });
-  }
-  function openLiveOptionsChart(ticker, active = true) {
-    const encodedTicker = encodeTicker(ticker);
-    openUrl(
-      LIVE_OPTIONS_CHARTS_URL_TEMPLATE.replace("{TICKER}", encodedTicker),
-      {
-        active,
-        insert: true,
-      },
-    );
-  }
-  function openSpotChart(ticker, active = true) {
-    const encodedTicker = encodeTicker(ticker);
-    openUrl(LIVE_SPOT_CHARTS_URL_TEMPLATE.replace("{TICKER}", encodedTicker), {
-      active,
-      insert: true,
-    });
-  }
-  function openTickerOptionChain(ticker, active = true) {
+
+  // Generic function to open chart types
+  function openChart(chartTemplate, ticker, active = true) {
     if (!ticker) return;
+    const encodedTicker = encodeTicker(ticker);
+    openUrl(chartTemplate.replace("{TICKER}", encodedTicker), {
+      active,
+      insert: true,
+    });
+  }
+
+  function openOptionChain(ticker, active = true) {
+    openChart(OPTION_CHAIN_URL_TEMPLATE, ticker, active);
+  }
+
+  function openLiveOptionsChart(ticker, active = true) {
+    openChart(LIVE_OPTIONS_CHARTS_URL_TEMPLATE, ticker, active);
+  }
+
+  function openSpotChart(ticker, active = true) {
+    openChart(LIVE_SPOT_CHARTS_URL_TEMPLATE, ticker, active);
+  }
+
+  function openTickerOptionChain(ticker, active = true) {
     openOptionChain(ticker, active);
   }
+
   function openTickerLiveOptions(ticker, active = true) {
-    if (!ticker) return;
     openLiveOptionsChart(ticker, active);
   }
+
   function encodeTicker(ticker) {
     // Replace ampersand with %26 to handle special characters in URLs
     return ticker ? ticker.replace(/&/g, "%26") : ticker;
   }
 
   function openTickerSpotChart(ticker, active = true) {
-    if (!ticker) return;
     openSpotChart(ticker, active);
   }
 
@@ -631,7 +839,9 @@
     }
     return source
       .map((value) => String(value).trim().toUpperCase())
-      .filter((value) => value && VALID_TICKER_PATTERN.test(value));
+      .filter((value) => value &&
+              VALID_TICKER_PATTERN.test(value) &&
+              value.length <= MAX_TICKER_LENGTH);
   }
   function fallbackClipboardCopy(text) {
     const textarea = document.createElement("textarea");
@@ -677,8 +887,14 @@
         encodedTicker,
       );
       setTimeout(() => {
-        if (typeof GM_openInTab !== "undefined") {
-          GM_openInTab(url, { active: false, insert: true });
+        if (isGMFunctionAvailable() && typeof GM_openInTab !== "undefined") {
+          try {
+            GM_openInTab(url, { active: false, insert: true });
+          } catch (error) {
+            console.error("GM_openInTab failed:", error);
+            // Fallback to regular window.open if GM function fails
+            window.open(url, "_blank");
+          }
         } else {
           window.open(url, "_blank");
         }
@@ -805,11 +1021,16 @@
         saveBtn.addEventListener("click", () => {
           const newTabDelay = parseInt(delayInput.value);
           if (newTabDelay >= 0 && newTabDelay <= 2000) {
-            GM_setValue("tabDelay", newTabDelay);
-            TAB_DELAY = newTabDelay;
-            showToast("Settings Saved!");
+            try {
+              GM_setValue("tabDelay", newTabDelay);
+              TAB_DELAY = newTabDelay;
+              showToast("Settings Saved!");
+            } catch (error) {
+              console.error("Failed to save tab delay:", error);
+              showToast("Failed to save settings. Please try again.");
+            }
           } else {
-            showToast("Invalid values.");
+            showToast("Invalid tab delay value. Must be between 0 and 2000 ms.");
           }
         });
         inner.appendChild(saveBtn);
@@ -906,15 +1127,25 @@
         showToast("No ticker detected");
         return;
       }
-      SAVED_TICKERS = GM_getValue("savedTickers", []);
-      if (SAVED_TICKERS.includes(ticker)) {
-        showToast("Ticker already saved");
+      if (ticker.length > MAX_TICKER_LENGTH) {
+        showToast("Ticker name is too long");
         return;
       }
-      SAVED_TICKERS.push(ticker);
-      GM_setValue("savedTickers", SAVED_TICKERS);
-      showToast("Ticker saved!");
-      updateTickerList();
+
+      try {
+        SAVED_TICKERS = GM_getValue("savedTickers", []);
+        if (SAVED_TICKERS.includes(ticker)) {
+          showToast("Ticker already saved");
+          return;
+        }
+        SAVED_TICKERS.push(ticker);
+        GM_setValue("savedTickers", SAVED_TICKERS);
+        showToast("Ticker saved!");
+        updateTickerList();
+      } catch (error) {
+        console.error("Failed to save ticker:", error);
+        showToast("Failed to save ticker. Please try again.");
+      }
     });
     buttonContainer.appendChild(saveThisTickerBtn);
 
@@ -944,10 +1175,15 @@
     clearBtn.className = "urls-clear-btn";
     clearBtn.textContent = "Clear";
     clearBtn.addEventListener("click", () => {
-      GM_setValue("savedTickers", []);
-      SAVED_TICKERS = [];
-      showToast("Saved tickers cleared");
-      updateTickerList();
+      try {
+        GM_setValue("savedTickers", []);
+        SAVED_TICKERS = [];
+        showToast("Saved tickers cleared");
+        updateTickerList();
+      } catch (error) {
+        console.error("Failed to clear saved tickers:", error);
+        showToast("Failed to clear saved tickers. Please try again.");
+      }
     });
     listHeader.appendChild(clearBtn);
 
@@ -1009,13 +1245,18 @@
           showToast("No valid tickers to import");
           return;
         }
-        const current = new Set(GM_getValue("savedTickers", []));
-        parsed.forEach((ticker) => current.add(ticker));
-        SAVED_TICKERS = Array.from(current);
-        GM_setValue("savedTickers", SAVED_TICKERS);
-        showToast(`Imported ${parsed.length} tickers`);
-        updateTickerList();
-        textArea.value = "";
+        try {
+          const current = new Set(GM_getValue("savedTickers", []));
+          parsed.forEach((ticker) => current.add(ticker));
+          SAVED_TICKERS = Array.from(current);
+          GM_setValue("savedTickers", SAVED_TICKERS);
+          showToast(`Imported ${parsed.length} tickers`);
+          updateTickerList();
+          textArea.value = "";
+        } catch (error) {
+          console.error("Failed to import tickers:", error);
+          showToast("Failed to import tickers. Please try again.");
+        }
       });
       importActions.appendChild(importBtn);
 
@@ -1111,10 +1352,15 @@
     }
 
     function removeTicker(index) {
-      SAVED_TICKERS.splice(index, 1);
-      GM_setValue("savedTickers", SAVED_TICKERS);
-      updateTickerList();
-      showToast("Ticker removed");
+      try {
+        SAVED_TICKERS.splice(index, 1);
+        GM_setValue("savedTickers", SAVED_TICKERS);
+        updateTickerList();
+        showToast("Ticker removed");
+      } catch (error) {
+        console.error("Failed to remove ticker:", error);
+        showToast("Failed to remove ticker. Please try again.");
+      }
     }
     updateTickerList();
 
@@ -1153,7 +1399,13 @@
       urlsTab.classList.toggle("active", index === 1);
       analysisTab.classList.toggle("active", index === 2);
       LAST_TAB_INDEX = index;
-      if (persist) GM_setValue("lastTabIndex", index);
+      if (persist) {
+        try {
+          GM_setValue("lastTabIndex", index);
+        } catch (error) {
+          console.error("Failed to save last tab index:", error);
+        }
+      }
 
       // Clear the panel first
       scrollPanel.innerHTML = "";
@@ -1219,7 +1471,11 @@
     toggleBtn.addEventListener("click", () => {
       const isVisible = mainOuterPanel.classList.toggle("visible");
       PANEL_VISIBLE = isVisible;
-      GM_setValue("panelVisible", isVisible);
+      try {
+        GM_setValue("panelVisible", isVisible);
+      } catch (error) {
+        console.error("Failed to save panel visibility:", error);
+      }
 
       // If the panel is now visible, update the ticker display for the current tab
       if (isVisible) {
@@ -1236,14 +1492,22 @@
       if (e.key === "Escape") {
         mainOuterPanel.classList.remove("visible");
         PANEL_VISIBLE = false;
-        GM_setValue("panelVisible", false);
+        try {
+          GM_setValue("panelVisible", false);
+        } catch (error) {
+          console.error("Failed to save panel visibility:", error);
+        }
       }
     });
     document.addEventListener("click", (e) => {
       if (!widget.contains(e.target)) {
         mainOuterPanel.classList.remove("visible");
         PANEL_VISIBLE = false;
-        GM_setValue("panelVisible", false);
+        try {
+          GM_setValue("panelVisible", false);
+        } catch (error) {
+          console.error("Failed to save panel visibility:", error);
+        }
       }
     });
 
