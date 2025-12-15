@@ -23,7 +23,7 @@
     "https://web.sensibull.com/option-chain?tradingsymbol={TICKER}";
 
   const SECTOR_STOCKS = {
-    "Banking & Financial Services": ["HDFCBANK", "ICICIBANK"],
+    "Banking & Financial Services": ["HDFCBANK", "M&M"],
     "Information Technology": ["INFY", "TCS"],
     "Automobile & Auto Ancillary": ["MARUTI", "TCS"],
     "Oil & Gas": ["RELIANCE", "ONGC"],
@@ -514,10 +514,13 @@
   }
   function openLiveOptionsChart(ticker, active = true) {
     const encodedTicker = encodeTicker(ticker);
-    openUrl(LIVE_OPTIONS_CHARTS_URL_TEMPLATE.replace("{TICKER}", encodedTicker), {
-      active,
-      insert: true,
-    });
+    openUrl(
+      LIVE_OPTIONS_CHARTS_URL_TEMPLATE.replace("{TICKER}", encodedTicker),
+      {
+        active,
+        insert: true,
+      },
+    );
   }
   function openSpotChart(ticker, active = true) {
     const encodedTicker = encodeTicker(ticker);
@@ -536,7 +539,7 @@
   }
   function encodeTicker(ticker) {
     // Replace ampersand with %26 to handle special characters in URLs
-    return ticker ? ticker.replace(/&/g, '%26') : ticker;
+    return ticker ? ticker.replace(/&/g, "%26") : ticker;
   }
 
   function openTickerSpotChart(ticker, active = true) {
@@ -563,14 +566,16 @@
   function extractTickerFromURL() {
     const url = window.location.href;
     const patterns = [
-      /tradingsymbol=([A-Z0-9&-]+)/i,
-      /tradingSymbol=([A-Z0-9&-]+)/i,
-      /symbol=([A-Z0-9&-]+)/i,
-      /\/([A-Z0-9&-]+)(?:\/|\?|$)/,
+      /tradingsymbol=([A-Z0-9%&-]+)/i,
+      /tradingSymbol=([A-Z0-9%&-]+)/i,
+      /symbol=([A-Z0-9%&-]+)/i,
+      /\/([A-Z0-9%&-]+)(?:\/|\?|$)/,
     ];
     for (const pattern of patterns) {
       const match = url.match(pattern);
       if (match && match[1]) {
+        // Decode any percent-encoded characters (like %26 for &)
+        // decodeURIComponent automatically converts %26 to &
         return decodeURIComponent(match[1]);
       }
     }
@@ -643,7 +648,10 @@
     showToast(`Opening batch: ${batchInfo} (${tickers.length} tabs)`);
     tickers.forEach((ticker, index) => {
       const encodedTicker = encodeTicker(ticker);
-      const url = LIVE_OPTIONS_CHARTS_URL_TEMPLATE.replace("{TICKER}", encodedTicker);
+      const url = LIVE_OPTIONS_CHARTS_URL_TEMPLATE.replace(
+        "{TICKER}",
+        encodedTicker,
+      );
       setTimeout(() => {
         if (typeof GM_openInTab !== "undefined") {
           GM_openInTab(url, { active: false, insert: true });
@@ -703,14 +711,14 @@
     for (const [sectorName, sectorTickers] of Object.entries(SECTOR_STOCKS)) {
       const totalTickers = sectorTickers.length;
 
-      inner.appendChild(
-        labelSpan(`${sectorName} • ${totalTickers} tickers`)
-      );
+      inner.appendChild(labelSpan(`${sectorName} • ${totalTickers} tickers`));
 
       const btn = document.createElement("button");
       btn.className = "stock-batch-btn";
       btn.innerHTML = `<span style="flex-shrink:0;">Open All Stocks</span><span class="badge">${totalTickers}</span>`;
-      btn.addEventListener("click", () => openBatch(sectorTickers, `${sectorName} (${totalTickers} stocks)`));
+      btn.addEventListener("click", () =>
+        openBatch(sectorTickers, `${sectorName} (${totalTickers} stocks)`),
+      );
       inner.appendChild(btn);
 
       inner.appendChild(divider());
