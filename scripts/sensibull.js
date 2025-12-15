@@ -23,20 +23,39 @@
     "https://web.sensibull.com/option-chain?tradingsymbol={TICKER}";
 
   const SECTOR_STOCKS = {
-    "Banking & Financial Services": ["HDFCBANK", "M&M"],
-    "Information Technology": ["INFY", "TCS"],
-    "Automobile & Auto Ancillary": ["MARUTI", "TCS"],
-    "Oil & Gas": ["RELIANCE", "ONGC"],
-    "Metals & Mining": ["TATASTEEL", "JSWSTEEL"],
-    FMCG: ["HINDUNILVR", "ITC"],
-    Pharmaceuticals: ["CIPLA", "DRREDDY"],
-    "Power & Energy": ["NTPC", "POWERGRID"],
+    "Financial Services": [
+      "HDFCBANK",
+      "ICICIBANK",
+      "SBIN",
+      "BAJFINANCE",
+      "KOTAKBANK",
+      "AXISBANK",
+      "BAJAJFINSV",
+      "SBILIFE",
+      "JIOFIN",
+      "HDFCLIFE",
+      "SHRIRAMFIN",
+    ],
+    "Information Technology": ["TCS", "INFY", "HCLTECH", "WIPRO", "TECHM"],
+    "Automobile and Auto Components": [
+      "MARUTI",
+      "M&M",
+      "BAJAJ-AUTO",
+      "EICHERMOT",
+      "TMPV",
+    ],
+    "Oil Gas & Consumable Fuels": ["RELIANCE", "ONGC", "COALINDIA"],
+    "Metals & Mining": ["JSWSTEEL", "ADANIENT", "TATASTEEL", "HINDALCO"],
+    FMCG: ["HINDUNILVR", "ITC", "NESTLEIND", "TATACONSUM"],
+    Healthcare: ["SUNPHARMA", "CIPLA", "DRREDDY", "MAXHEALTH", "APOLLOHOSP"],
+    Power: ["NTPC", "POWERGRID"],
     "Construction Materials": ["ULTRACEMCO", "GRASIM"],
-    Telecommunications: ["BHARTIARTL", "IDEA"],
-    Chemicals: ["PIDILITE", "ATUL"],
-    Infrastructure: ["LT", "JINDALSAW"],
-    "Media & Entertainment": ["DISHTV", "GVF"],
-    "Aviation & Logistics": ["INDIGO", "AIRTEL"],
+    Telecommunications: ["BHARTIARTL"],
+    Construction: ["LT"],
+    Services: ["ADANIPORTS", "INDIGO"],
+    "Capital Goods": ["BEL"],
+    "Consumer Services": ["ETERNAL", "TRENT"],
+    "Consumer Durables": ["TITAN", "ASIANPAINT"],
   };
 
   const VALID_TICKER_PATTERN = /^[A-Z0-9&-]+$/;
@@ -678,93 +697,128 @@
     const inner = document.createElement("div");
     inner.className = "stock-panel-inner";
 
-    // Detect current ticker and show it prominently
-    const currentTicker = extractTickerFromURL();
+    // Create a function to update ticker display (keeping only the top section)
+    function updateTickerDisplay() {
+      // Get current elements that we want to preserve (settings section at the bottom)
+      const existingChildren = Array.from(inner.children);
+      const settingsElements = [];
+      let settingsSectionStarted = false;
 
-    // Show the detected ticker name prominently
-    const tickerDisplay = document.createElement("div");
-    tickerDisplay.className = "stock-current-ticker";
-    tickerDisplay.innerHTML = currentTicker
-      ? `<span>Detected Ticker: <strong>${currentTicker}</strong></span>`
-      : `<span><strong>No ticker detected in URL</strong></span>`;
-    tickerDisplay.style.justifyContent = "center";
-    tickerDisplay.style.fontSize = "18px";
-    tickerDisplay.style.fontWeight = "bold";
-    inner.appendChild(tickerDisplay);
+      // Look for the 'Settings' label and capture all elements after it
+      for (let i = 0; i < existingChildren.length; i++) {
+        if (existingChildren[i].textContent && existingChildren[i].textContent.includes('Settings')) {
+          settingsSectionStarted = true;
+        }
+        if (settingsSectionStarted) {
+          settingsElements.push(existingChildren[i]);
+        }
+      }
 
-    // Add buttons for spot chart and option chain if ticker is available
-    if (currentTicker) {
-      // Button for spot chart
-      const spotChartBtn = document.createElement("button");
-      spotChartBtn.className = "stock-btn";
-      spotChartBtn.textContent = "Open Spot Chart";
-      spotChartBtn.style.marginBottom = "12px";
-      spotChartBtn.addEventListener("click", () => {
-        openCurrentTicker(currentTicker);
-      });
-      inner.appendChild(spotChartBtn);
+      // Clear only the content that needs to be refreshed (the top section)
+      inner.innerHTML = '';
 
-      // Button for option chain
-      const optionChainBtn = document.createElement("button");
-      optionChainBtn.className = "stock-btn";
-      optionChainBtn.textContent = "Open Option Chain";
-      optionChainBtn.addEventListener("click", () => {
-        openTickerOptionChain(currentTicker);
-      });
-      inner.appendChild(optionChainBtn);
-    } else {
-      // Message when no ticker is detected
-      const noTickerMessage = document.createElement("div");
-      noTickerMessage.style.textAlign = "center";
-      noTickerMessage.style.margin = "15px 0";
-      noTickerMessage.style.color = "var(--color-primary)";
-      noTickerMessage.style.fontStyle = "italic";
-      noTickerMessage.textContent = "Navigate to a Sensibull chart to see options here";
-      inner.appendChild(noTickerMessage);
-    }
+      // Detect current ticker and show it prominently
+      const currentTicker = extractTickerFromURL();
 
-    inner.appendChild(divider());
+      // Show the detected ticker name prominently
+      const tickerDisplay = document.createElement("div");
+      tickerDisplay.className = "stock-current-ticker";
+      tickerDisplay.innerHTML = currentTicker
+        ? `<span>Detected Ticker: <strong>${currentTicker}</strong></span>`
+        : `<span><strong>No ticker detected in URL</strong></span>`;
+      tickerDisplay.style.justifyContent = "center";
+      tickerDisplay.style.fontSize = "18px";
+      tickerDisplay.style.fontWeight = "bold";
+      inner.appendChild(tickerDisplay);
 
-    // Display sector-wise buttons - one button per sector to open all stocks
-    for (const [sectorName, sectorTickers] of Object.entries(SECTOR_STOCKS)) {
-      const totalTickers = sectorTickers.length;
+      // Add buttons for spot chart and option chain if ticker is available
+      if (currentTicker) {
+        // Button for spot chart
+        const spotChartBtn = document.createElement("button");
+        spotChartBtn.className = "stock-btn";
+        spotChartBtn.textContent = "Open Spot Chart";
+        spotChartBtn.style.marginBottom = "12px";
+        spotChartBtn.addEventListener("click", () => {
+          openCurrentTicker(currentTicker);
+        });
+        inner.appendChild(spotChartBtn);
 
-      inner.appendChild(labelSpan(`${sectorName} • ${totalTickers} tickers`));
-
-      const btn = document.createElement("button");
-      btn.className = "stock-batch-btn";
-      btn.innerHTML = `<span style="flex-shrink:0;">Open All Stocks</span><span class="badge">${totalTickers}</span>`;
-      btn.addEventListener("click", () =>
-        openBatch(sectorTickers, `${sectorName} (${totalTickers} stocks)`),
-      );
-      inner.appendChild(btn);
+        // Button for option chain
+        const optionChainBtn = document.createElement("button");
+        optionChainBtn.className = "stock-btn";
+        optionChainBtn.textContent = "Open Option Chain";
+        optionChainBtn.addEventListener("click", () => {
+          openTickerOptionChain(currentTicker);
+        });
+        inner.appendChild(optionChainBtn);
+      } else {
+        // Message when no ticker is detected
+        const noTickerMessage = document.createElement("div");
+        noTickerMessage.className = "ticker-message";
+        noTickerMessage.style.textAlign = "center";
+        noTickerMessage.style.margin = "15px 0";
+        noTickerMessage.style.color = "var(--color-primary)";
+        noTickerMessage.style.fontStyle = "italic";
+        noTickerMessage.textContent =
+          "Navigate to a Sensibull chart to see options here";
+        inner.appendChild(noTickerMessage);
+      }
 
       inner.appendChild(divider());
+
+      // Display sector-wise buttons - one button per sector to open all stocks
+      for (const [sectorName, sectorTickers] of Object.entries(SECTOR_STOCKS)) {
+        const totalTickers = sectorTickers.length;
+
+        inner.appendChild(labelSpan(`${sectorName} • ${totalTickers} tickers`));
+
+        const btn = document.createElement("button");
+        btn.className = "stock-batch-btn";
+        btn.innerHTML = `<span style="flex-shrink:0;">Open All Stocks</span><span class="badge">${totalTickers}</span>`;
+        btn.addEventListener("click", () =>
+          openBatch(sectorTickers, `${sectorName} (${totalTickers} stocks)`),
+        );
+        inner.appendChild(btn);
+
+        inner.appendChild(divider());
+      }
+
+      // Add Settings section if it doesn't exist
+      if (settingsElements.length === 0) {
+        inner.appendChild(divider());
+        inner.appendChild(labelSpan("Settings"));
+
+        const { row: delayRow, input: delayInput } =
+          createDelaySettingRow("tab-delay-input");
+        inner.appendChild(delayRow);
+        delayRow.querySelector("label").textContent = "Tab Delay (ms)";
+
+        // Save Settings Button
+        const saveBtn = document.createElement("button");
+        saveBtn.className = "stock-btn";
+        saveBtn.textContent = "Save Settings";
+        saveBtn.addEventListener("click", () => {
+          const newTabDelay = parseInt(delayInput.value);
+          if (newTabDelay >= 0 && newTabDelay <= 2000) {
+            GM_setValue("tabDelay", newTabDelay);
+            TAB_DELAY = newTabDelay;
+            showToast("Settings Saved!");
+          } else {
+            showToast("Invalid values.");
+          }
+        });
+        inner.appendChild(saveBtn);
+      } else {
+        // Re-add the preserved settings elements at the bottom
+        settingsElements.forEach(element => inner.appendChild(element));
+      }
     }
 
-    // Integrated Settings Section
-    inner.appendChild(labelSpan("Settings"));
+    // Initial call to populate the content
+    updateTickerDisplay();
 
-    const { row: delayRow, input: delayInput } =
-      createDelaySettingRow("tab-delay-input");
-    inner.appendChild(delayRow);
-    delayRow.querySelector("label").textContent = "Tab Delay (ms)";
-
-    // Save Settings Button
-    const saveBtn = document.createElement("button");
-    saveBtn.className = "stock-btn";
-    saveBtn.textContent = "Save Settings";
-    saveBtn.addEventListener("click", () => {
-      const newTabDelay = parseInt(delayInput.value);
-      if (newTabDelay >= 0 && newTabDelay <= 2000) {
-        GM_setValue("tabDelay", newTabDelay);
-        TAB_DELAY = newTabDelay;
-        showToast("Settings Saved!");
-      } else {
-        showToast("Invalid values.");
-      }
-    });
-    inner.appendChild(saveBtn);
+    // Store reference to update function
+    inner.updateTickerDisplay = updateTickerDisplay;
 
     return inner;
   }
@@ -772,39 +826,58 @@
     const inner = document.createElement("div");
     inner.className = "stock-panel-inner";
 
-    const currentTicker = extractTickerFromURL();
-    const status = document.createElement("div");
-    status.className = "stock-info-label";
-    status.textContent = currentTicker
-      ? `Ticker detected: ${currentTicker}`
-      : "No ticker detected in current URL";
-    inner.appendChild(status);
+    // Create a function to update ticker display
+    function updateTickerDisplay() {
+      // Find and remove existing status and button elements (but keep any others)
+      const existingChildren = Array.from(inner.children);
+      for (const child of existingChildren) {
+        if (child.className === 'stock-info-label' ||
+            (child.className === 'stock-btn' &&
+             child.textContent.startsWith('Open'))) {
+          inner.removeChild(child);
+        }
+      }
 
-    const buttonLabels = [
-      {
-        label: "Open Option Chain",
-        action: () => currentTicker && openOptionChain(currentTicker),
-      },
-      {
-        label: "Open Live Options Chart",
-        action: () => currentTicker && openLiveOptionsChart(currentTicker),
-      },
-      {
-        label: "Open Spot Chart",
-        action: () => currentTicker && openSpotChart(currentTicker, true),
-      },
-    ];
+      const currentTicker = extractTickerFromURL();
+      const status = document.createElement("div");
+      status.className = "stock-info-label";
+      status.textContent = currentTicker
+        ? `Ticker detected: ${currentTicker}`
+        : "No ticker detected in current URL";
+      inner.insertBefore(status, inner.firstChild);
 
-    buttonLabels.forEach(({ label, action }) => {
-      const btn = document.createElement("button");
-      btn.className = "stock-btn";
-      btn.textContent = label;
-      btn.disabled = !currentTicker;
-      btn.addEventListener("click", () => {
-        action(true);
+      const buttonLabels = [
+        {
+          label: "Open Option Chain",
+          action: () => currentTicker && openOptionChain(currentTicker),
+        },
+        {
+          label: "Open Live Options Chart",
+          action: () => currentTicker && openLiveOptionsChart(currentTicker),
+        },
+        {
+          label: "Open Spot Chart",
+          action: () => currentTicker && openSpotChart(currentTicker, true),
+        },
+      ];
+
+      buttonLabels.forEach(({ label, action }) => {
+        const btn = document.createElement("button");
+        btn.className = "stock-btn";
+        btn.textContent = label;
+        btn.disabled = !currentTicker;
+        btn.addEventListener("click", () => {
+          action(true);
+        });
+        inner.appendChild(btn);
       });
-      inner.appendChild(btn);
-    });
+    }
+
+    // Initial call to populate the content
+    updateTickerDisplay();
+
+    // Store reference to update function
+    inner.updateTickerDisplay = updateTickerDisplay;
 
     return inner;
   }
@@ -1040,6 +1113,9 @@
     }
     updateTickerList();
 
+    // Store reference to update function
+    inner.updateTickerDisplay = updateTickerList;
+
     return inner;
   }
 
@@ -1071,15 +1147,29 @@
       chartsTab.classList.toggle("active", index === 0);
       urlsTab.classList.toggle("active", index === 1);
       analysisTab.classList.toggle("active", index === 2);
-      scrollPanel.innerHTML = "";
       LAST_TAB_INDEX = index;
       if (persist) GM_setValue("lastTabIndex", index);
+
+      // Clear the panel first
+      scrollPanel.innerHTML = "";
+
+      let panel;
       if (index === 0) {
-        scrollPanel.appendChild(panelChartsTools());
+        panel = panelChartsTools();
       } else if (index === 1) {
-        scrollPanel.appendChild(panelSavedUrlsTools());
+        panel = panelSavedUrlsTools();
       } else {
-        scrollPanel.appendChild(panelAnalysisTools());
+        panel = panelAnalysisTools();
+      }
+
+      scrollPanel.appendChild(panel);
+
+      // If the panel has an updateTickerDisplay function, call it
+      if (panel.updateTickerDisplay && typeof panel.updateTickerDisplay === 'function') {
+        // Add a small delay to ensure DOM is ready
+        setTimeout(() => {
+          panel.updateTickerDisplay();
+        }, 10);
       }
     };
     chartsTab.addEventListener("click", () => switchTab(0));
@@ -1125,6 +1215,16 @@
       const isVisible = mainOuterPanel.classList.toggle("visible");
       PANEL_VISIBLE = isVisible;
       GM_setValue("panelVisible", isVisible);
+
+      // If the panel is now visible, update the ticker display for the current tab
+      if (isVisible) {
+        setTimeout(() => {
+          const activePanel = scrollPanel.querySelector('.stock-panel-inner');
+          if (activePanel && activePanel.updateTickerDisplay && typeof activePanel.updateTickerDisplay === 'function') {
+            activePanel.updateTickerDisplay();
+          }
+        }, 10);
+      }
     });
     widget.addEventListener("click", (e) => e.stopPropagation());
     document.addEventListener("keydown", (e) => {
