@@ -566,10 +566,10 @@
   function extractTickerFromURL() {
     const url = window.location.href;
     const patterns = [
-      /tradingsymbol=([A-Z0-9%&-]+)/i,
-      /tradingSymbol=([A-Z0-9%&-]+)/i,
-      /symbol=([A-Z0-9%&-]+)/i,
-      /\/([A-Z0-9%&-]+)(?:\/|\?|$)/,
+      /tradingsymbol=([A-Z0-9%&-]+)(?:&|#|\?|$)/i,
+      /tradingSymbol=([A-Z0-9%&-]+)(?:&|#|\?|$)/i,
+      /symbol=([A-Z0-9%&-]+)(?:&|#|\?|$)/i,
+      /\/([A-Z0-9%&-]+)(?:\/|\?|&|#|$)/,
     ];
     for (const pattern of patterns) {
       const match = url.match(pattern);
@@ -678,32 +678,50 @@
     const inner = document.createElement("div");
     inner.className = "stock-panel-inner";
 
-    // Current chart open (centered)
+    // Detect current ticker and show it prominently
     const currentTicker = extractTickerFromURL();
-    const currentTickerBtn = document.createElement("button");
-    currentTickerBtn.className = "stock-current-ticker";
-    currentTickerBtn.innerHTML = currentTicker
-      ? `<span>Open Chart For ${currentTicker}</span><span>📈</span>`
-      : `<span>No ticker detected in URL</span><span>⚠️</span>`;
-    currentTickerBtn.disabled = !currentTicker;
-    currentTickerBtn.addEventListener("click", () => {
-      if (!currentTicker) return;
-      openCurrentTicker(currentTicker);
-    });
-    inner.appendChild(currentTickerBtn);
 
-    // Add open option chain button below the current ticker button
-    const optionChainBtn = document.createElement("button");
-    optionChainBtn.className = "stock-current-ticker";
-    optionChainBtn.innerHTML = currentTicker
-      ? `<span>Open Option Chain For ${currentTicker}</span><span>📊</span>`
-      : `<span>No ticker detected in URL</span><span>⚠️</span>`;
-    optionChainBtn.disabled = !currentTicker;
-    optionChainBtn.addEventListener("click", () => {
-      if (!currentTicker) return;
-      openTickerOptionChain(currentTicker);
-    });
-    inner.appendChild(optionChainBtn);
+    // Show the detected ticker name prominently
+    const tickerDisplay = document.createElement("div");
+    tickerDisplay.className = "stock-current-ticker";
+    tickerDisplay.innerHTML = currentTicker
+      ? `<span>Detected Ticker: <strong>${currentTicker}</strong></span>`
+      : `<span><strong>No ticker detected in URL</strong></span>`;
+    tickerDisplay.style.justifyContent = "center";
+    tickerDisplay.style.fontSize = "18px";
+    tickerDisplay.style.fontWeight = "bold";
+    inner.appendChild(tickerDisplay);
+
+    // Add buttons for spot chart and option chain if ticker is available
+    if (currentTicker) {
+      // Button for spot chart
+      const spotChartBtn = document.createElement("button");
+      spotChartBtn.className = "stock-btn";
+      spotChartBtn.textContent = "Open Spot Chart";
+      spotChartBtn.style.marginBottom = "12px";
+      spotChartBtn.addEventListener("click", () => {
+        openCurrentTicker(currentTicker);
+      });
+      inner.appendChild(spotChartBtn);
+
+      // Button for option chain
+      const optionChainBtn = document.createElement("button");
+      optionChainBtn.className = "stock-btn";
+      optionChainBtn.textContent = "Open Option Chain";
+      optionChainBtn.addEventListener("click", () => {
+        openTickerOptionChain(currentTicker);
+      });
+      inner.appendChild(optionChainBtn);
+    } else {
+      // Message when no ticker is detected
+      const noTickerMessage = document.createElement("div");
+      noTickerMessage.style.textAlign = "center";
+      noTickerMessage.style.margin = "15px 0";
+      noTickerMessage.style.color = "var(--color-primary)";
+      noTickerMessage.style.fontStyle = "italic";
+      noTickerMessage.textContent = "Navigate to a Sensibull chart to see options here";
+      inner.appendChild(noTickerMessage);
+    }
 
     inner.appendChild(divider());
 
